@@ -1,2 +1,2 @@
-# as-rm-performance-tests
+# ras-rm-performance-tests
 Performance Test Scripts
