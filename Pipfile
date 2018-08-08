@@ -1,0 +1,20 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+requests = "*"
+python-dateutil = "*"
+paramiko = "*"
+schema = "*"
+"num2words" = "*"
+
+[dev-packages]
+pytest = "*"
+httpretty = "*"
+pytest-sftpserver = "*"
+pycodestyle = "*"
+
+[requires]
+python_version = "3.6"
