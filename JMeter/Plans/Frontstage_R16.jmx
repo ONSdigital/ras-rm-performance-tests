@@ -63,8 +63,8 @@
           <boolProp name="LoopController.continue_forever">false</boolProp>
           <intProp name="LoopController.loops">-1</intProp>
         </elementProp>
-        <stringProp name="ThreadGroup.num_threads">300</stringProp>
-        <stringProp name="ThreadGroup.ramp_time">600</stringProp>
+        <stringProp name="ThreadGroup.num_threads">200</stringProp>
+        <stringProp name="ThreadGroup.ramp_time">400</stringProp>
         <longProp name="ThreadGroup.start_time">1521821056000</longProp>
         <longProp name="ThreadGroup.end_time">1521821056000</longProp>
         <boolProp name="ThreadGroup.scheduler">false</boolProp>
@@ -1147,7 +1147,7 @@
               <connectTime>true</connectTime>
             </value>
           </objProp>
-          <stringProp name="filename">C:\CF\testResults\10users_10create_180618_1_1.csv</stringProp>
+          <stringProp name="filename">C:\CF\testResults\createAccount_150-180601_3.csv</stringProp>
         </ResultCollector>
         <hashTree/>
         <ResultCollector guiclass="SummaryReport" testclass="ResultCollector" testname="Summary Report" enabled="true">
@@ -1269,8 +1269,8 @@
           <boolProp name="LoopController.continue_forever">false</boolProp>
           <intProp name="LoopController.loops">-1</intProp>
         </elementProp>
-        <stringProp name="ThreadGroup.num_threads">1</stringProp>
-        <stringProp name="ThreadGroup.ramp_time">1</stringProp>
+        <stringProp name="ThreadGroup.num_threads">250</stringProp>
+        <stringProp name="ThreadGroup.ramp_time">500</stringProp>
         <longProp name="ThreadGroup.start_time">1522061348000</longProp>
         <longProp name="ThreadGroup.end_time">1522061348000</longProp>
         <boolProp name="ThreadGroup.scheduler">false</boolProp>
@@ -1431,7 +1431,7 @@
             </hashTree>
           </hashTree>
         </hashTree>
-        <ResultCollector guiclass="ViewResultsFullVisualizer" testclass="ResultCollector" testname="View Results Tree" enabled="true">
+        <ResultCollector guiclass="ViewResultsFullVisualizer" testclass="ResultCollector" testname="View Results Tree" enabled="false">
           <boolProp name="ResultCollector.error_logging">false</boolProp>
           <objProp>
             <name>saveConfig</name>
@@ -1656,7 +1656,7 @@
               <hashTree/>
               <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="VP_SignInButton_HomePage" enabled="true">
                 <collectionProp name="Asserion.test_strings">
-                  <stringProp name="577676284">&lt;button class=&quot;btn btn--primary venus&quot; type=&quot;submit&quot; id=&quot;SIGN_IN_BUTTON&quot;&gt;Sign in&lt;/button&gt;</stringProp>
+                  <stringProp name="1043346428">&lt;button class=&quot;btn btn--primary venus&quot; type=&quot;submit&quot; id=&quot;sign_in_button&quot;&gt;Sign in&lt;/button&gt;</stringProp>
                 </collectionProp>
                 <stringProp name="Assertion.test_field">Assertion.response_data</stringProp>
                 <boolProp name="Assertion.assume_success">false</boolProp>
@@ -2802,7 +2802,7 @@
               <connectTime>true</connectTime>
             </value>
           </objProp>
-          <stringProp name="filename">C:\CF\testResults\eQJourney_150-180524_1_1.csv</stringProp>
+          <stringProp name="filename">C:\CF\testResults\1500users_300eQ_180629_3_1.csv</stringProp>
         </ResultCollector>
         <hashTree/>
         <ResultCollector guiclass="StatGraphVisualizer" testclass="ResultCollector" testname="Aggregate Graph" enabled="false">
