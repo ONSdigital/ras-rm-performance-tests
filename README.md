@@ -5,7 +5,7 @@ Performance Test Scripts
 
 **Ensure that you're pointed towards the correct (non-prod) environment before running these tests!**
 
-Change values.yaml to point at the right namespace (this will be handled for you once Spinnakered)
+Change `values.yaml` to point at the right namespace (this will be handled for you once Spinnakered)
 
 Install the helm charts for Locust
 ```bash
