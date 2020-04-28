@@ -6,7 +6,7 @@ image:
   pullPolicy: IfNotPresent
   pullSecrets: []
 
-namespace: crockerm
+namespace: minikube
 frontstage:
   port: 9000
 
