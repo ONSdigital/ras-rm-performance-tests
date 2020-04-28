@@ -1,6 +1,10 @@
-master:
-  config:
-    target-host: "http://frontstage.crockerm.svc.cluster.local:9000"
+locust:
+  master:
+    config:
+      target-host: "http://frontstage.crockerm.svc.cluster.local:9000"
 
-worker:
-  replicaCount: 5
+  worker:
+    config:
+      configmapName: locust-worker
+      locust-script: "/locust-tasks/tasks.py"
+    replicaCount: 5
