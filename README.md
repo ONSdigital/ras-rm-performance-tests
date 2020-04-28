@@ -5,7 +5,7 @@ Performance Test Scripts
 
 **Ensure that you're pointed towards the correct (non-prod) environment before running these tests!**
 
-Change `values.yaml` to point at the right namespace (this will be handled for you once Spinnakered)
+Change `values.yaml` to point `master.config.target-host` at the right URL (this will be handled for you once Spinnakered). In sandboxes/dev, this means changing `minikube` to your namespace.
 
 Install the helm charts for Locust
 ```bash
@@ -35,7 +35,3 @@ In `_infra\helm\locust\tasks\tasks.py` - this is a specific location mounted by 
 ## I need more workers!
 
 In `values.yaml`, change `workers.replicaCount`
-
-## Credits
-
-Forked from [the stable Helm charts](https://github.com/helm/charts/tree/master/stable/locust)
