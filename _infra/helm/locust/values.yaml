@@ -8,3 +8,6 @@ locust:
       configmapName: locust-worker
       locust-script: "/locust-tasks/tasks.py"
     replicaCount: 5
+  
+  image:
+    tag: latest
