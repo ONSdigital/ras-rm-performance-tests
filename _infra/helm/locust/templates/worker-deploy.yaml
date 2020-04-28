@@ -47,7 +47,7 @@ spec:
         - name: LOCUST_MASTER_WEB
           value: "{{ .Values.service.internalPort }}"
         - name: TARGET_HOST
-          value: {{ index .Values.master.config "target-host" | quote }}
+          value: "http://frontstage.{{ .Values.namespace }}.svc.cluster.local:{{ .Values.frontstage.port }}"
 {{- if .Values.extraEnvs }}
 {{ toYaml .Values.extraEnvs | indent 8 }}
 {{- end }}

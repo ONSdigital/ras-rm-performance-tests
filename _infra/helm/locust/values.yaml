@@ -6,6 +6,10 @@ image:
   pullPolicy: IfNotPresent
   pullSecrets: []
 
+namespace: crockerm
+frontstage:
+  port: 9000
+
 service:
   name: master-web
   type: NodePort
@@ -39,8 +43,6 @@ extraEnvs: []
 #       key: mySecretKey
 
 master:
-  config:
-    target-host: "http://frontstage.crockerm.svc.cluster.local:9000"
   resources:
     limits:
       cpu: 100m
@@ -63,7 +65,7 @@ worker:
 
     # all files from specified configmap (or tasks folder) are mounted under `/locust-tasks`
     locust-script: "/locust-tasks/tests.py"
-  replicaCount: 2
+  replicaCount: 10
   resources:
     limits:
       cpu: 100m

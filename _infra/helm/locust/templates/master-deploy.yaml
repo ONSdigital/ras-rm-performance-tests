@@ -33,14 +33,12 @@ spec:
         resources:
 {{ toYaml .Values.master.resources | indent 10 }}
         env:
-        {{- range $key, $value :=  .Values.master.config }}
-        - name: {{ $key | upper | replace "-" "_" }}
-          value: {{ $value | quote }}
-        {{- end }}
         - name: LOCUST_MODE
           value: "master"
         - name: LOCUST_SCRIPT
           value: {{ index .Values.worker.config "locust-script" | quote }}
+        - name: TARGET_HOST
+          value: "http://frontstage.{{ .Values.namespace }}.svc.cluster.local:{{ .Values.frontstage.port }}"
 {{- if .Values.extraEnvs }}
 {{ toYaml .Values.extraEnvs | indent 8 }}
 {{- end }}
