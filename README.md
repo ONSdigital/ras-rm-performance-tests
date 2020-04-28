@@ -30,7 +30,7 @@ helm uninstall locust
 
 ## Where are the tests?
 
-In `_infra\helm\locust\tasks\tasks.py` - this is a specific location mounted by the helm chart. We can set up a configmap in the future to change this.
+In `_infra\helm\locust\tasks`
 
 ## I need more workers!
 

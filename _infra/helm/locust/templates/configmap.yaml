@@ -8,4 +8,4 @@ metadata:
     chart: "{{ .Chart.Name }}-{{ .Chart.Version }}"
     app: {{ template "locust.fullname" . }}
 data:
-{{ (.Files.Glob "../../../tasks/*").AsConfig | indent 2 }}
+{{ (.Files.Glob "tasks/*").AsConfig | indent 2 }}
