@@ -26,3 +26,7 @@ Uninstall the helm chart
 ```bash
 helm uninstall locust
 ```
+
+## Where are the tests?
+
+In _infra\helm\locust\tests
