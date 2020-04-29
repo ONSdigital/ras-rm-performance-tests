@@ -1,0 +1,6 @@
+{
+  "cloudProviders": "kubernetes",
+  "email": "matthew.crocker@ons.gov.uk",
+  "instancePort": 8089,
+  "name": "locust"
+ }

@@ -1,0 +1,189 @@
+{
+  "application": "locust",
+  "name": "deploy",
+  "expectedArtifacts": [
+    {
+      "defaultArtifact": {
+        "artifactAccount": "ons-rasrmbs-management",
+        "id": "837f2a3d-c977-4223-b760-862800336854",
+        "name": "gs://ras-rm-artifacts/locust/locust.0.1.0.tgz",
+        "reference": "gs://ras-rm-artifacts/locust/locust.0.1.0.tgz",
+        "type": "gcs/object"
+      },
+      "displayName": "helm-chart",
+      "id": "13d1f051-a2ce-4043-a8dd-c50052cdd801",
+      "matchArtifact": {
+        "artifactAccount": "ons-rasrmbs-management",
+        "id": "a4dd9a01-d5f5-4e6f-bd53-6c6cbbfbdefe",
+        "name": "gs://ras-rm-artifacts/locust/locust.*\\.tgz",
+        "type": "gcs/object"
+      },
+      "useDefaultArtifact": true,
+      "usePriorArtifact": true
+    }
+  ],
+  "keepWaitingPipelines": false,
+  "lastModifiedBy": "john.terry@ons.gov.uk",
+  "limitConcurrent": true,
+  "parameterConfig": [
+    {
+      "default": "performance",
+      "description": "Chose cluster to deploy locust",
+      "hasOptions": true,
+      "label": "Deploy to cluster",
+      "name": "cluster",
+      "options": [
+        {
+          "value": "spinnaker"
+        },
+        {
+          "value": "dev"
+        },
+        {
+          "value": "sandbox"
+        }
+      ],
+      "pinned": true,
+      "required": true
+    },
+    {
+      "default": "performance",
+      "description": "test frontstage in this namespace",
+      "hasOptions": true,
+      "label": "Namespace that frontstage lives",
+      "name": "frontstageNamespace",
+      "options": [
+        {
+          "value": "crockerm"
+        },
+        {
+          "value": "terryj"
+        },
+        {
+          "value": "baileyw"
+        },
+        {
+          "value": "wilkia"
+        },
+        {
+          "value": "khanm"
+        },
+        {
+          "value": "dev"
+        },
+        {
+          "value": "staging"
+        },
+        {
+          "value": "manna"
+        },
+        {
+          "value": "sinhaa"
+        },
+        {
+          "value": "foxj"
+        },
+        {
+          "value": "kentj"
+        }
+      ],
+      "pinned": true,
+      "required": true
+    }
+  ],
+  "spelEvaluator": "v4",
+  "stages": [
+    {
+      "evaluateOverrideExpressions": true,
+      "expectedArtifacts": [
+        {
+          "defaultArtifact": {
+            "customKind": true,
+            "id": "602ec6fa-31e5-42d7-a26d-a6695c0f2391"
+          },
+          "displayName": "deployment",
+          "id": "b59068e0-69a0-465f-9237-8ded7e817d00",
+          "matchArtifact": {
+            "id": "a9ac2251-15ff-4fa9-bc44-16f2adb56f23",
+            "name": "deployment",
+            "type": "embedded/base64"
+          },
+          "useDefaultArtifact": false,
+          "usePriorArtifact": false
+        }
+      ],
+      "inputArtifacts": [
+        {
+          "account": "ons-rasrmbs-management",
+          "id": "13d1f051-a2ce-4043-a8dd-c50052cdd801"
+        }
+      ],
+      "name": "Bake (Manifest)",
+      "namespace": "default",
+      "outputName": "locust",
+      "overrides": {
+        "locust.master.config.target-host": "http://frontstage.${parameters.frontstageNamespace}.svc.cluster.local:9000"
+      },
+      "refId": "1",
+      "requisiteStageRefIds": [],
+      "templateRenderer": "HELM3",
+      "type": "bakeManifest"
+    },
+    {
+      "account": "${parameters.cluster}",
+      "cloudProvider": "kubernetes",
+      "manifestArtifactAccount": "embedded-artifact",
+      "manifestArtifactId": "b59068e0-69a0-465f-9237-8ded7e817d00",
+      "moniker": {
+        "app": "locust"
+      },
+      "name": "Deploy (Manifest)",
+      "namespaceOverride": "locust",
+      "refId": "2",
+      "requisiteStageRefIds": [
+        "1",
+        "3"
+      ],
+      "skipExpressionEvaluation": true,
+      "source": "artifact",
+      "trafficManagement": {
+        "enabled": false,
+        "options": {
+          "enableTraffic": false,
+          "services": []
+        }
+      },
+      "type": "deployManifest"
+    },
+    {
+      "account": "${parameters.cluster}",
+      "app": "locust",
+      "cloudProvider": "kubernetes",
+      "completeOtherBranchesThenFail": false,
+      "continuePipeline": true,
+      "failPipeline": false,
+      "location": "default",
+      "manifestName": "namespace locust",
+      "mode": "static",
+      "name": "Delete Locust namespace",
+      "options": {
+        "cascading": true
+      },
+      "refId": "3",
+      "requisiteStageRefIds": [],
+      "type": "deleteManifest"
+    }
+  ],
+  "triggers": [
+    {
+      "enabled": true,
+      "expectedArtifactIds": [
+        "13d1f051-a2ce-4043-a8dd-c50052cdd801"
+      ],
+      "pubsubSystem": "google",
+      "subscriptionName": "helm-releases",
+      "type": "pubsub"
+    }
+  ],
+  "updateTs": "1588168113703"
+}
