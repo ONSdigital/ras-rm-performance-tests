@@ -2,6 +2,8 @@ locust:
   master:
     config:
       target-host: "http://frontstage.minikube.svc.cluster.local:9000"
+      collection-instrument: "http://collection-instrument.minikube.svc.cluster.local:8080"
+      collection-exercise: "http://collection-exercise.minikube.svc.cluster.local:8080"
 
   worker:
     config:
