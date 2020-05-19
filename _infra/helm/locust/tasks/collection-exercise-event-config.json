@@ -1,0 +1,7 @@
+{
+    "inputFiles": ["data/2018_surveys_schedule.csv"],
+    "columnMappings": {
+        "survey_code": "surveyRef",
+        "survey_period": "exerciseRef"
+    }
+}
