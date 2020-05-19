@@ -4,6 +4,7 @@ locust:
       target-host: "http://frontstage.crockerm.svc.cluster.local:9000"
       collection-instrument: "http://collection-instrument.crockerm.svc.cluster.local:8080"
       collection-exercise: "http://collection-exercise.crockerm.svc.cluster.local:8080"
+      survey: "http://survey.crockerm.svc.cluster.local:8080"
       security-user-name: "admin"
       security-user-password: "secret"
 

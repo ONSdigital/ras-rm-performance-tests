@@ -9,7 +9,9 @@ import csv
 from datetime import timezone
 from functools import partial
 
-survey_id = '02b9c366-7397-42f7-942a-76dc5876d86d'
+survey_short_name = 'QBS'
+survey_long_name = 'Quarterly Business Survey'
+survey_ref = '139'
 form_type = '0001'
 eq_id = '2'
 period = '1806'
@@ -23,11 +25,42 @@ ignore_columns = ['surveyRef', 'exerciseRef']
 def load_data():
     auth = (os.getenv('SECURITY_USER_NAME'), os.getenv('SECURITY_USER_PASSWORD'))
 
+    survey_id = load_survey(auth)
     load_collection_exercises(auth)
     load_collection_exercise_events(auth)
-    load_collection_instrument(auth)
+    load_collection_instrument(auth, survey_id)
 
     logger.info('Executing collection exercise', extra={'survey_id':survey_id, 'period':period, 'ci_type':'eQ'})
+
+# Survey loading
+def load_survey(auth):
+    logger.info('Trying to find survey %s', survey_short_name)
+    get_url = f"{os.getenv('SURVEY')}/surveys/shortname/{survey_short_name}"
+    get_response = requests.get(get_url, auth=auth)
+
+    if get_response.status_code != 404:
+        get_data = json.loads(get_response.json())
+        logger.info("Survey successfully found at id %s", get_data['id'])
+        return get_data['id']
+    
+    create_url = f"{os.getenv('SURVEY')}/surveys"
+    survey_details = {
+        "surveyRef": survey_ref,
+        "longName": survey_long_name,
+        "shortName": survey_short_name,
+        "legalBasisRef": 'STA1947',
+        "surveyType": 'Business',
+        "classifiers": [
+            {"name": "COLLECTION_INSTRUMENT", "classifierTypes": ["FORM_TYPE"]},
+            {"name": "COMMUNICATION_TEMPLATE", "classifierTypes": ["LEGAL_BASIS", "REGION"]}
+        ]
+    }
+
+    create_response = requests.post(create_url, json=survey_details, auth=auth)
+    create_response.raise_for_status()
+    create_data = json.loads(create_response.json())
+    logger.info("Successfully created survey at id %s", create_data['id'])
+    return create_data['id']
 
 # Helper methods for Collection exercise/event mapping
 def map_columns(column_mappings, row):
@@ -126,7 +159,7 @@ def post_event(collection_exercise_id, event_tag, date, auth, url):
     logger.info("%s <= %s (%s)", status_code, data, detail_text)
 
 # Collection instrument loading
-def load_collection_instrument(auth):
+def load_collection_instrument(auth, survey_id):
     logger.info('Uploading eQ collection instrument', extra={'survey_id':survey_id, 'form_type':form_type})
     url = f"{os.getenv('COLLECTION_INSTRUMENT')}/collection-instrument-api/1.0.2/upload"
 
