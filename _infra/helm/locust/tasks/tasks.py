@@ -2,6 +2,7 @@ from locust import HttpLocust, TaskSet, task, events, between
 import datetime
 import sys
 import os
+import io
 import json
 import requests
 import logging
@@ -29,6 +30,7 @@ def load_data():
     load_collection_exercises(auth)
     load_collection_exercise_events(auth)
     load_collection_instrument(auth, survey_id)
+    load_sample(auth)
 
     logger.info('Executing collection exercise', extra={'survey_id':survey_id, 'period':period, 'ci_type':'eQ'})
 
@@ -174,6 +176,60 @@ def load_collection_instrument(auth, survey_id):
     }
 
     response = requests.post(url=url, auth=auth, params=params)
+
+# Sample loading/generation
+def load_sample(auth):
+    logger.info('Generating and loading sample for survey %s, period %s', survey_ref, period)
+    sample = generate_sample_string(respondents=5)
+    collection_exercise_id = get_collection_exercise_id(survey_ref, period, f"{os.getenv('COLLECTION_EXERCISE')}/collectionexercises", auth)
+    url = f"{os.getenv('SAMPLE')}/samples/B/fileupload"
+    files = {'file': ('test_sample_file.xlxs', sample.encode('utf-8'), 'text/csv')}
+
+    response = requests.post(url=url, auth=auth, files=files)
+
+    if response.status_code != 201:
+        logger.error('%s << Error uploading sample file for survey %s, period %s', response.status_code, survey_ref, period)
+    else:
+        logger.info('Successfully uploaded sample file for survey %s, period %s', survey_ref, period)
+
+def generate_sample_string(respondents):
+    output = io.StringIO()
+    writer = csv.writer(output)
+    for i in range(respondents):
+        sampleunitref='499'+format(str(i), "0>8s")
+        runame3=str(i)
+        tradas3=str(i)
+        region_code='WW'
+        row=(   sampleunitref,
+                'H',
+                '75110',
+                '75110',
+                '84110',
+                '84110',
+                '3603',
+                '97281',
+                '9905249178',
+                '5',
+                'E',
+                region_code,
+                '07/08/2003',
+                'OFFICE FOR',
+                'NATIONAL STATISTICS',
+                runame3,
+                'OFFICE FOR',
+                'NATIONAL STATISTICS',
+                tradas3,
+                '',
+                '',
+                '',
+                'C',
+                '',
+                '1',
+                form_type,
+                'S')
+        writer.writerow(row)
+    
+    return output.getvalue()
 
 # This will only be run on Master and should be used for loading test data
 if '--master' in sys.argv:
