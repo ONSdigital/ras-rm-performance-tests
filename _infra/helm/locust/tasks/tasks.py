@@ -30,7 +30,7 @@ def load_data():
     load_collection_exercises(auth)
     load_collection_exercise_events(auth)
     load_collection_instrument(auth, survey_id)
-    load_sample(auth)
+    sample_link_data = load_and_link_sample(auth)
 
     logger.info('Executing collection exercise', extra={'survey_id':survey_id, 'period':period, 'ci_type':'eQ'})
 
@@ -177,20 +177,27 @@ def load_collection_instrument(auth, survey_id):
 
     response = requests.post(url=url, auth=auth, params=params)
 
-# Sample loading/generation
-def load_sample(auth):
+# Sample generation/loading/linking
+def load_and_link_sample(auth):
     logger.info('Generating and loading sample for survey %s, period %s', survey_ref, period)
     sample = generate_sample_string(respondents=5)
-    collection_exercise_id = get_collection_exercise_id(survey_ref, period, f"{os.getenv('COLLECTION_EXERCISE')}/collectionexercises", auth)
-    url = f"{os.getenv('SAMPLE')}/samples/B/fileupload"
+    collection_exercise_url = f"{os.getenv('COLLECTION_EXERCISE')}/collectionexercises"
+    collection_exercise_id = get_collection_exercise_id(survey_ref, period, collection_exercise_url, auth)
+    sample_url = f"{os.getenv('SAMPLE')}/samples/B/fileupload"
     files = {'file': ('test_sample_file.xlxs', sample.encode('utf-8'), 'text/csv')}
 
-    response = requests.post(url=url, auth=auth, files=files)
+    sample_response = requests.post(url=sample_url, auth=auth, files=files)
 
-    if response.status_code != 201:
-        logger.error('%s << Error uploading sample file for survey %s, period %s', response.status_code, survey_ref, period)
-    else:
-        logger.info('Successfully uploaded sample file for survey %s, period %s', survey_ref, period)
+    if sample_response.status_code != 201:
+        logger.error('%s << Error uploading sample file for survey %s, period %s', sample_response.status_code, survey_ref, period)
+        raise Exception('Failed to upload sample')
+    
+    logger.info('Successfully uploaded sample file for survey %s, period %s', survey_ref, period)
+    data = {'sampleSummaryIds': [str(sample_response.json()['id'])]}
+
+    collection_exercise_response = requests.put(f'{collection_exercise_url}/link/{collection_exercise_id}', auth=auth, json=data)
+    collection_exercise_response.raise_for_status()
+    logger.info('Successfully linked sample summary with collection exercise %s', period)
 
 def generate_sample_string(respondents):
     output = io.StringIO()
