@@ -5,6 +5,7 @@ import os
 import io
 import json
 import requests
+import time
 import logging
 import csv
 from datetime import timezone, datetime
@@ -31,8 +32,7 @@ def load_data():
     load_collection_exercise_events(auth)
     load_collection_instrument(auth, survey_id)
     sample_link_data = load_and_link_sample(auth)
-
-    logger.info('Executing collection exercise', extra={'survey_id':survey_id, 'period':period, 'ci_type':'eQ'})
+    execute_collection_exercise(auth, survey_id)
 
 # Survey loading
 def load_survey(auth):
@@ -134,21 +134,19 @@ def load_collection_exercise_events(auth):
     process_files(input_files, row_handler, column_mappings)
 
 def process_event_row(data, auth, url):
-    collection_exercise_id = get_collection_exercise_id(survey_ref=data['surveyRef'], exercise_ref=data['exerciseRef'], url=url, auth=auth)
+    collection_exercise_id = get_collection_exercise(survey_ref=data['surveyRef'], exercise_ref=data['exerciseRef'], url=url, auth=auth)['id']
     for event_tag, date in data.items():
         if not event_tag in ignore_columns:
             post_event(collection_exercise_id, event_tag, date, auth, url)
 
-def get_collection_exercise_id(survey_ref, exercise_ref, url, auth):
+def get_collection_exercise(survey_ref, exercise_ref, url, auth):
     response = requests.get(f'{url}/{exercise_ref}/survey/{survey_ref}', auth=auth, verify=False)
     data = json.loads(response.text)
 
-    logger.info("Processing survey %s, collection exercise %s", survey_ref, exercise_ref)
-
     if "error" in data:
-        logger.error("Error getting collection exercise ID for posting events: survey %s, exercise %s, error %s", survey_ref, exercise_ref, data['error'])
+        logger.error("Error getting collection exercise ID for survey %s, exercise %s, error %s", survey_ref, exercise_ref, data['error'])
     else:
-        return data['id']
+        return data
 
 def post_event(collection_exercise_id, event_tag, date, auth, url):
     data = {"tag": event_tag, "timestamp": reformat_date(date)}
@@ -182,7 +180,7 @@ def load_and_link_sample(auth):
     logger.info('Generating and loading sample for survey %s, period %s', survey_ref, period)
     sample = generate_sample_string(respondents=5)
     collection_exercise_url = f"{os.getenv('COLLECTION_EXERCISE')}/collectionexercises"
-    collection_exercise_id = get_collection_exercise_id(survey_ref, period, collection_exercise_url, auth)
+    collection_exercise_id = get_collection_exercise(survey_ref, period, collection_exercise_url, auth)['id']
     sample_url = f"{os.getenv('SAMPLE')}/samples/B/fileupload"
     files = {'file': ('test_sample_file.xlxs', sample.encode('utf-8'), 'text/csv')}
 
@@ -237,6 +235,31 @@ def generate_sample_string(respondents):
         writer.writerow(row)
     
     return output.getvalue()
+
+# Collection exercise execution
+def execute_collection_exercise(auth, survey_id):
+    poll_url = f"{os.getenv('COLLECTION_EXERCISE')}/collectionexercises"
+    attempt = 1
+    ready = False
+    while attempt <= 20 and not ready:
+        logger.info('Polling to see if collection exercise %s is ready to execute (attempt %s)', period, attempt)
+        data = get_collection_exercise(survey_ref, period, poll_url, auth)
+        ready = data['state'] == 'READY_FOR_REVIEW'
+        if not ready:
+            logger.info('Not ready, current state is %s, waiting 10s', data['state'])
+            attempt += 1
+            time.sleep(10)
+
+    if not ready:
+        logger.error('Collection exercise %s on survey %s never went READY_FOR_REVIEW', period, survey_ref)
+        raise Exception('Failed to execute collection exercise')
+
+    logger.info('Executing collection exercise %s on survey %s ', period, survey_ref)
+    execute_url = f"{os.getenv('COLLECTION_EXERCISE')}/collectionexerciseexecution/{data['id']}"
+    response = requests.post(execute_url, auth=auth)
+    response.raise_for_status()
+
+    logger.info('Collection exerise %s on survey %s executed', period, survey_ref)
 
 # This will only be run on Master and should be used for loading test data
 if '--master' in sys.argv:
