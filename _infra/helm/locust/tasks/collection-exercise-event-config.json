@@ -1,5 +1,5 @@
 {
-    "inputFiles": ["data/2018_surveys_schedule.csv"],
+    "inputFiles": ["locust-tasks/ce_event_details.csv"],
     "columnMappings": {
         "survey_code": "surveyRef",
         "survey_period": "exerciseRef"

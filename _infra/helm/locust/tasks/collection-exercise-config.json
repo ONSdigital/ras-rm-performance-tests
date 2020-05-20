@@ -1,5 +1,5 @@
 {
-    "inputFiles": ["locust-tasks/CE_Details_for_loading_into_RM.csv"],
+    "inputFiles": ["locust-tasks/ce_details.csv"],
     "columnMappings": {
         "Survey_Id": "surveyRef",
         "Survey_Name": "name",

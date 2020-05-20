@@ -6,7 +6,7 @@ import json
 import requests
 import logging
 import csv
-from datetime import timezone
+from datetime import timezone, datetime
 from functools import partial
 
 survey_short_name = 'QBS'
@@ -39,7 +39,7 @@ def load_survey(auth):
     get_response = requests.get(get_url, auth=auth)
 
     if get_response.status_code != 404:
-        get_data = json.loads(get_response.json())
+        get_data = json.loads(get_response.text)
         logger.info("Survey successfully found at id %s", get_data['id'])
         return get_data['id']
     
@@ -58,7 +58,7 @@ def load_survey(auth):
 
     create_response = requests.post(create_url, json=survey_details, auth=auth)
     create_response.raise_for_status()
-    create_data = json.loads(create_response.json())
+    create_data = json.loads(create_response.text)
     logger.info("Successfully created survey at id %s", create_data['id'])
     return create_data['id']
 
