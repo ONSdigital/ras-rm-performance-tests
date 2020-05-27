@@ -34,6 +34,7 @@ def load_data():
     load_and_link_collection_instrument(auth, survey_id)
     sample_link_data = load_and_link_sample(auth)
     execute_collection_exercise(auth, survey_id)
+    register_users(auth)
 
 # Survey loading
 def load_survey(auth):
@@ -199,7 +200,7 @@ def load_and_link_collection_instrument(auth, survey_id):
 # Sample generation/loading/linking
 def load_and_link_sample(auth):
     logger.info('Generating and loading sample for survey %s, period %s', survey_ref, period)
-    sample = generate_sample_string(respondents=respondents)
+    sample = generate_sample_string(size=respondents)
     collection_exercise_url = f"{os.getenv('COLLECTION_EXERCISE')}/collectionexercises"
     collection_exercise_id = get_collection_exercise(survey_ref, period, collection_exercise_url, auth)['id']
     sample_url = f"{os.getenv('SAMPLE')}/samples/B/fileupload"
@@ -221,9 +222,9 @@ def load_and_link_sample(auth):
         sample_summary = json.loads(requests.get(poll_url, auth=auth).text)
         ready = sample_summary['state'] == 'ACTIVE'
         if not ready:
-            logger.info('Not ready, current state is %s, waiting 10s', sample_summary['state'])
+            logger.info('Not ready, current state is %s, waiting 3s', sample_summary['state'])
             attempt += 1
-            time.sleep(10)
+            time.sleep(3)
 
     if not ready:
         logger.error('Collection exercise %s on survey %s never went READY_FOR_REVIEW', period, survey_ref)
@@ -238,11 +239,11 @@ def generate_sample_string(size):
     output = io.StringIO()
     writer = csv.writer(output, delimiter=":")
     for i in range(size):
-        sampleunitref='499'+format(str(i), "0>8s")
+        sample_unit_ref='499'+format(str(i), "0>8s")
         runame3=str(i)
         tradas3=str(i)
         region_code='WW'
-        row=(   sampleunitref,
+        row=(   sample_unit_ref,
                 'H',
                 '75110',
                 '75110',
@@ -283,9 +284,9 @@ def execute_collection_exercise(auth, survey_id):
         data = get_collection_exercise(survey_ref, period, poll_url, auth)
         ready = data['state'] == 'READY_FOR_REVIEW'
         if not ready:
-            logger.info('Not ready, current state is %s, waiting 10s', data['state'])
+            logger.info('Not ready, current state is %s, waiting 3s', data['state'])
             attempt += 1
-            time.sleep(10)
+            time.sleep(3)
 
     if not ready:
         logger.error('Collection exercise %s on survey %s never went READY_FOR_REVIEW', period, survey_ref)
@@ -297,6 +298,74 @@ def execute_collection_exercise(auth, survey_id):
     response.raise_for_status()
 
     logger.info('Collection exerise %s on survey %s executed', period, survey_ref)
+
+# Register respondent accounts
+def register_users(auth):
+    for i in range(respondents):
+        sample_unit_ref = '499' + format(str(i), "0>8s")
+        email_address = sample_unit_ref + "@test.com"
+        logger.info("Attempting to register user %s", email_address)
+        
+        party_ru_url = f"{os.getenv('PARTY')}/party-api/v1/businesses/ref/{sample_unit_ref}"
+        party_response = requests.get(party_ru_url, auth=auth)
+        party_response.raise_for_status()
+        ru_party_id = json.loads(party_response.text)['id']
+
+        attempt = 1
+        case_found = False
+        while attempt <= 20 and not case_found:
+            logger.info('Polling to see if case for %s is ready to register against (attempt %s)', sample_unit_ref, attempt)
+            case_url = f"{os.getenv('CASE')}/cases/partyid/{ru_party_id}"
+            case_response = requests.get(case_url, auth=auth, params={"iac": "true"})
+            case_response.raise_for_status()
+            if case_response.status_code == 200:
+                case_found = True
+                case_data = json.loads(case_response.text)[0]
+                if case_data['iac'] is None:
+                    case_id = case_data['id']
+                    generate_iac_url = f"{os.getenv('CASE')}/cases/{case_id}/events"
+                    payload = {
+                        "description": "Generate new enrolment code",
+                        "category": "GENERATE_ENROLMENT_CODE",
+                        "createdBy": "TESTS"
+                    }
+                    generate_iac_response = requests.post(generate_iac_url, json=payload, auth=auth)
+                    generate_iac_response.raise_for_status()
+
+                    get_new_iac_url = f"{os.getenv('CASE')}/cases/{case_id}"
+                    get_new_iac_response = requests.get(get_new_iac_url, auth=auth, params={"iac": "true"})
+                    get_new_iac_response.raise_for_status()
+                    iac = json.loads(get_new_iac_response.text)['iac']
+                else:
+                    iac = case_data['iac']
+            else:
+                logger.info('Not found, waiting 3s')
+                attempt += 1
+                time.sleep(3)
+
+        if not case_found:
+            logger.error("Case never found for %s", sample_unit_ref)
+            raise Exception("Case not found")
+
+        register_url = f"{os.getenv('PARTY')}/party-api/v1/respondents"
+        data = {
+            'emailAddress': email_address,
+            'firstName': 'first_name',
+            'lastName': 'last_name',
+            'password': os.getenv('TEST_RESPONDENT_PASSWORD'),
+            'telephone': '09876543210',
+            'enrolmentCode': iac
+        }
+        register_response = requests.post(register_url, json=data, auth=auth)
+        if register_response.status_code != 200:
+            logger.error("Couldn't register user %s because %s > %s", email_address, register_response.status_code, register_response.text)
+            raise Exception("Failed to register user")
+
+        respondent_id = json.loads(register_response.text)['id']
+        activate_url = f"{os.getenv('PARTY')}/party-api/v1/respondents/edit-account-status/{respondent_id}"
+        activate_response = requests.put(activate_url, json={"status_change": "ACTIVE"}, auth=auth)
+        activate_response.raise_for_status()
+        logger.info("Successfully registered and activated user %s", email_address)
 
 # This will only be run on Master and should be used for loading test data
 if '--master' in sys.argv:
