@@ -17,6 +17,7 @@ survey_ref = '139'
 form_type = '0001'
 eq_id = '2'
 period = '1806'
+respondents = 5
 logger = logging.getLogger()
 
 # Ignore these during collection exercise event processing as they are the key 
@@ -198,7 +199,7 @@ def load_and_link_collection_instrument(auth, survey_id):
 # Sample generation/loading/linking
 def load_and_link_sample(auth):
     logger.info('Generating and loading sample for survey %s, period %s', survey_ref, period)
-    sample = generate_sample_string(respondents=5)
+    sample = generate_sample_string(respondents=respondents)
     collection_exercise_url = f"{os.getenv('COLLECTION_EXERCISE')}/collectionexercises"
     collection_exercise_id = get_collection_exercise(survey_ref, period, collection_exercise_url, auth)['id']
     sample_url = f"{os.getenv('SAMPLE')}/samples/B/fileupload"
@@ -233,10 +234,10 @@ def load_and_link_sample(auth):
     collection_exercise_response.raise_for_status()
     logger.info('Successfully linked sample summary with collection exercise %s', period)
 
-def generate_sample_string(respondents):
+def generate_sample_string(size):
     output = io.StringIO()
     writer = csv.writer(output, delimiter=":")
-    for i in range(respondents):
+    for i in range(size):
         sampleunitref='499'+format(str(i), "0>8s")
         runame3=str(i)
         tradas3=str(i)
