@@ -30,7 +30,7 @@ def load_data():
     survey_id = load_survey(auth)
     load_collection_exercises(auth)
     load_collection_exercise_events(auth)
-    load_collection_instrument(auth, survey_id)
+    load_and_link_collection_instrument(auth, survey_id)
     sample_link_data = load_and_link_sample(auth)
     execute_collection_exercise(auth, survey_id)
 
@@ -159,21 +159,41 @@ def post_event(collection_exercise_id, event_tag, date, auth, url):
     logger.info("%s <= %s (%s)", status_code, data, detail_text)
 
 # Collection instrument loading
-def load_collection_instrument(auth, survey_id):
-    logger.info('Uploading eQ collection instrument', extra={'survey_id':survey_id, 'form_type':form_type})
-    url = f"{os.getenv('COLLECTION_INSTRUMENT')}/collection-instrument-api/1.0.2/upload"
+def load_and_link_collection_instrument(auth, survey_id):
+    logger.info('Uploading eQ collection instrument', extra={'survey_id': survey_id, 'form_type': form_type})
+    post_url = f"{os.getenv('COLLECTION_INSTRUMENT')}/collection-instrument-api/1.0.2/upload"
 
-    classifiers = {
+    post_classifiers = {
         "form_type": form_type,
         "eq_id": eq_id
     }
 
     params = {
-        "classifiers": json.dumps(classifiers),
+        "classifiers": json.dumps(post_classifiers),
         "survey_id": survey_id
     }
 
-    response = requests.post(url=url, auth=auth, params=params)
+    post_response = requests.post(url=post_url, auth=auth, params=params)
+    
+    get_url = f"{os.getenv('COLLECTION_INSTRUMENT')}/collection-instrument-api/1.0.2/collectioninstrument"
+    get_classifiers = {
+        "form_type": form_type,
+        "SURVEY_ID": survey_id
+    }
+
+    get_response = requests.get(url=get_url, auth=auth, params={'searchString': json.dumps(get_classifiers)})
+    get_response.raise_for_status()
+
+    collection_exercise_url = f"{os.getenv('COLLECTION_EXERCISE')}/collectionexercises"
+    collection_exercise_id = get_collection_exercise(survey_ref, period, collection_exercise_url, auth)['id']
+
+    for ci in json.loads(get_response.text):
+        logger.info('Linking collection instrument %s to exercise %s', ci['id'], period)
+        link_url = f"{os.getenv('COLLECTION_INSTRUMENT')}/collection-instrument-api/1.0.2/link-exercise/{ci['id']}/{collection_exercise_id}"
+        link_response = requests.post(url=link_url, auth=auth)
+        link_response.raise_for_status()
+    
+    logger.info('Successfully linked collection instruments to exercise %s', period)
 
 # Sample generation/loading/linking
 def load_and_link_sample(auth):
@@ -190,16 +210,32 @@ def load_and_link_sample(auth):
         logger.error('%s << Error uploading sample file for survey %s, period %s', sample_response.status_code, survey_ref, period)
         raise Exception('Failed to upload sample')
     
+    sample_summary_id = sample_response.json()['id']
     logger.info('Successfully uploaded sample file for survey %s, period %s', survey_ref, period)
-    data = {'sampleSummaryIds': [str(sample_response.json()['id'])]}
+    poll_url = f"{os.getenv('SAMPLE')}/samples/samplesummary/{sample_summary_id}"
+    attempt = 1
+    ready = False
+    while attempt <= 20 and not ready:
+        logger.info('Polling to see if sample summary %s is ready to link (attempt %s)', sample_summary_id, attempt)
+        sample_summary = json.loads(requests.get(poll_url, auth=auth).text)
+        ready = sample_summary['state'] == 'ACTIVE'
+        if not ready:
+            logger.info('Not ready, current state is %s, waiting 10s', sample_summary['state'])
+            attempt += 1
+            time.sleep(10)
 
+    if not ready:
+        logger.error('Collection exercise %s on survey %s never went READY_FOR_REVIEW', period, survey_ref)
+        raise Exception('Failed to execute collection exercise')
+
+    data = {'sampleSummaryIds': [str(sample_summary_id)]}
     collection_exercise_response = requests.put(f'{collection_exercise_url}/link/{collection_exercise_id}', auth=auth, json=data)
     collection_exercise_response.raise_for_status()
     logger.info('Successfully linked sample summary with collection exercise %s', period)
 
 def generate_sample_string(respondents):
     output = io.StringIO()
-    writer = csv.writer(output)
+    writer = csv.writer(output, delimiter=":")
     for i in range(respondents):
         sampleunitref='499'+format(str(i), "0>8s")
         runame3=str(i)
