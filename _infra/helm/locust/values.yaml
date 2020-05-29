@@ -11,7 +11,7 @@ locust:
       security-user-name: "admin"
       security-user-password: "secret"
       test-respondent-password: "password"
-      test-respondents: 500
+      test-respondents: 5
 
   worker:
     config:
