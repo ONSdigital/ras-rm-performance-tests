@@ -17,7 +17,7 @@ survey_ref = '139'
 form_type = '0001'
 eq_id = '2'
 period = '1806'
-respondents = 5
+respondents = os.getenv('TEST_RESPONDENTS')
 logger = logging.getLogger()
 
 # Ignore these during collection exercise event processing as they are the key 
