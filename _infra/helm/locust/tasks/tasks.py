@@ -319,25 +319,14 @@ def register_users(auth):
             case_response = requests.get(case_url, auth=auth, params={"iac": "true"})
             case_response.raise_for_status()
             if case_response.status_code == 200:
-                case_found = True
                 case_data = json.loads(case_response.text)[0]
-                if case_data['iac'] is None:
-                    case_id = case_data['id']
-                    generate_iac_url = f"{os.getenv('CASE')}/cases/{case_id}/events"
-                    payload = {
-                        "description": "Generate new enrolment code",
-                        "category": "GENERATE_ENROLMENT_CODE",
-                        "createdBy": "TESTS"
-                    }
-                    generate_iac_response = requests.post(generate_iac_url, json=payload, auth=auth)
-                    generate_iac_response.raise_for_status()
-
-                    get_new_iac_url = f"{os.getenv('CASE')}/cases/{case_id}"
-                    get_new_iac_response = requests.get(get_new_iac_url, auth=auth, params={"iac": "true"})
-                    get_new_iac_response.raise_for_status()
-                    iac = json.loads(get_new_iac_response.text)['iac']
-                else:
+                if case_data['iac'] is not None:
                     iac = case_data['iac']
+                    case_found = True
+                else:
+                    logger.info('IAC not found, waiting 3s')
+                    attempt += 1
+                    time.sleep(3)
             else:
                 logger.info('Not found, waiting 3s')
                 attempt += 1
@@ -362,8 +351,9 @@ def register_users(auth):
             raise Exception("Failed to register user")
 
         respondent_id = json.loads(register_response.text)['id']
+        activate_payload = {"status_change": "ACTIVE"}
         activate_url = f"{os.getenv('PARTY')}/party-api/v1/respondents/edit-account-status/{respondent_id}"
-        activate_response = requests.put(activate_url, json={"status_change": "ACTIVE"}, auth=auth)
+        activate_response = requests.put(activate_url, json=activate_payload, auth=auth)
         activate_response.raise_for_status()
         logger.info("Successfully registered and activated user %s", email_address)
 
