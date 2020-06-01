@@ -390,6 +390,16 @@ class FrontstageTasks(TaskSequence):
             response.failure("No surveys in survey list")
         if 'Quarterly Business Survey' in response.content:
             response.success()
+    
+    @seq_task(2)
+    def surveys_todo(self):
+        response = self.client.get("/surveys/todo")
+        if 'You have no surveys to complete' in response.content:
+            response.failure("No surveys in survey list")
+        if 'Quarterly Business Survey' not in response.content:
+            response.failure("QBS survey not found in list")
+        if 'surveys/access-survey?' not in response.content or '&ci_type=EQ' not in response.content or "&survey_short_name=QBS" not in response.content:
+            response.failure("Can't find EQ access button")
 
 class FrontstageLocust(HttpLocust):
   task_set = FrontstageTasks
