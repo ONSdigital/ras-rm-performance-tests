@@ -9,6 +9,7 @@ import time
 import logging
 import csv
 import random
+import re
 from datetime import timezone, datetime
 from functools import partial
 
@@ -380,26 +381,34 @@ if '--master' in sys.argv:
     load_data()
 
 class FrontstageTasks(TaskSequence):
-    @seq_task(1)
+    create_message_link = None
+    def on_start(self):
+        self.login()
+
     def login(self):
         sample_unit_ref = '499' + format(str(random.randint(0, respondents)), "0>8s")
-        response = self.client.post("/sign-in/", {'form': {'username': sample_unit_ref + "@test.com", 'password': os.getenv('TEST_RESPONDENT_PASSWORD')}})
-        if 'Incorrect email or password' in response.content:
-            response.failure("Login failed")
-        if 'You have no surveys to complete' in response.content:
-            response.failure("No surveys in survey list")
-        if 'Quarterly Business Survey' in response.content:
-            response.success()
+        data = {'username': sample_unit_ref + "@test.com", 'password': os.getenv('TEST_RESPONDENT_PASSWORD')}
+        response = self.client.post("/sign-in/?next=", data=data, catch_response=True, allow_redirects=False)
+        self.auth_cookie = response.cookies['authorization']
+
+    @seq_task(1)
+    def surveys_todo(self):
+        with self.client.get("/surveys/todo", cookies={"authorization": self.auth_cookie}, catch_response=True) as response:
+            if 'Sign in' in response.text:
+                response.failure("Not logged in")
+            if 'You have no surveys to complete' in response.text:
+                response.failure("No surveys in survey list")
+            if 'Quarterly Business Survey' not in response.text:
+                response.failure("QBS survey not found in list")
+            self.create_message_link = re.search('\/secure-message\/create-message\/[^\"]*', response.text).group(0)
     
     @seq_task(2)
-    def surveys_todo(self):
-        response = self.client.get("/surveys/todo")
-        if 'You have no surveys to complete' in response.content:
-            response.failure("No surveys in survey list")
-        if 'Quarterly Business Survey' not in response.content:
-            response.failure("QBS survey not found in list")
-        if 'surveys/access-survey?' not in response.content or '&ci_type=EQ' not in response.content or "&survey_short_name=QBS" not in response.content:
-            response.failure("Can't find EQ access button")
+    def create_secure_message(self):
+        with self.client.get(self.create_message_link, cookies={"authorization": self.auth_cookie}, catch_response=True) as response:
+            if 'To: ONS Business Surveys team' not in response.text:
+                response.failure("Couldn't find To: when sending Secure Message")
+            if 'id="send-message-btn"' not in response.text:
+                response.failure("Couldn't find Secure Message Send button")
 
 class FrontstageLocust(HttpLocust):
   task_set = FrontstageTasks
