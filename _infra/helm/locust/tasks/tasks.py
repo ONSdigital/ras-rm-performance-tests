@@ -1,4 +1,4 @@
-from locust import HttpLocust, TaskSet, task, events, between
+from locust import HttpLocust, TaskSequence, seq_task, events, between
 import datetime
 import sys
 import os
@@ -8,6 +8,7 @@ import requests
 import time
 import logging
 import csv
+import random
 from datetime import timezone, datetime
 from functools import partial
 
@@ -357,14 +358,38 @@ def register_users(auth):
         activate_response.raise_for_status()
         logger.info("Successfully registered and activated user %s", email_address)
 
+def data_loaded():
+    auth = (os.getenv('SECURITY_USER_NAME'), os.getenv('SECURITY_USER_PASSWORD'))
+    url = f"{os.getenv('PARTY')}/party-api/v1/respondents?emailAddress={'499'+format(str(0), '0>8s')+'@test.com'}"
+    response = requests.get(url, auth=auth)
+    if response.status_code != 200:
+        logger.info("Loading data because Party check returned %s", response.status_code)
+        return False
+    data = json.loads(response.text)
+    if data['total'] == 0:
+        logger.info("Loading data because Party polled and %s records found", data['total'])
+        return False
+    if data['data'][0]['status'] != 'ACTIVE':
+        logger.info("Loading data because %s is set to %s (will probably fail)", '499'+format(str(0), '0>8s')+'@test.com', data['data'][0]['status'])
+        return False
+    return True
+
 # This will only be run on Master and should be used for loading test data
 if '--master' in sys.argv:
-  load_data()
+  if not data_loaded():
+    load_data()
 
-class FrontstageTasks(TaskSet):
-  @task(1)
-  def status(self):
-    response = self.client.get("/sign-in")
+class FrontstageTasks(TaskSequence):
+    @seq_task(1)
+    def login(self):
+        sample_unit_ref = '499' + format(str(random.randint(0, respondents)), "0>8s")
+        response = self.client.post("/sign-in/", {'form': {'username': sample_unit_ref + "@test.com", 'password': os.getenv('TEST_RESPONDENT_PASSWORD')}})
+        if 'Incorrect email or password' in response.content:
+            response.failure("Login failed")
+        if 'You have no surveys to complete' in response.content:
+            response.failure("No surveys in survey list")
+        if 'Quarterly Business Survey' in response.content:
+            response.success()
 
 class FrontstageLocust(HttpLocust):
   task_set = FrontstageTasks

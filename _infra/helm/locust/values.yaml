@@ -17,7 +17,10 @@ locust:
     config:
       configmapName: locust-worker
       locust-script: "/locust-tasks/tasks.py"
+      test-respondent-password: "password" # This should be identical to the value in master
+      test-respondents: 5 # This should be identical to the value in master
     replicaCount: 5
   
   image:
-    tag: "0.13.2"
+    repository: "greenbirdit/locust"
+    tag: "0.13.0"
