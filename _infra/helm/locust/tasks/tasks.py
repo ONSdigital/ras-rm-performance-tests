@@ -382,6 +382,7 @@ if '--master' in sys.argv:
 
 class FrontstageTasks(TaskSequence):
     create_message_link = None
+    view_message_thread_link = None
     def on_start(self):
         self.login()
 
@@ -422,6 +423,28 @@ class FrontstageTasks(TaskSequence):
             d = datetime.today()
             if 'first_name last_name' not in response.text:
                 response.failure("Not returned to the messages tab with a thread with our name on it")
+            if not (f'{d.strftime(":%M")}' in response.text or f'{(d - timedelta(minutes=1)).strftime(":%M")}' in response.text):
+                response.failure("No new messages sent in the last 60 seconds")
+            self.view_message_thread_link = re.search('\/secure-message\/threads\/[^\"]*#latest-message', response.text).group(0)
+    
+    @seq_task(4)
+    def view_message_thread(self):
+        with self.client.get(self.view_message_thread_link, cookies={"authorization": self.auth_cookie}, catch_response=True) as response:
+            if 'This is a performance test' not in response.text:
+                response.failure("Can't find message body in message thread")    
+
+    @seq_task(5)
+    def reply_to_message_thread(self):
+        reply_link = self.view_message_thread_link.split('#latest-message')[0]
+        data = {
+            "body": "Reply to a performance test",
+            "send": "send"
+        }
+
+        with self.client.post(reply_link, cookies={"authorization": self.auth_cookie}, data=data, catch_response=True) as response:
+            d = datetime.today()
+            if "Reply to a performance test" not in response.text:
+                response.failure("Message not replied to")
             if not (f'{d.strftime(":%M")}' in response.text or f'{(d - timedelta(minutes=1)).strftime(":%M")}' in response.text):
                 response.failure("No new messages sent in the last 60 seconds")
 
