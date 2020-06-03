@@ -447,6 +447,14 @@ class FrontstageTasks(TaskSequence):
                 response.failure("Message not replied to")
             if not (f'{d.strftime(":%M")}' in response.text or f'{(d - timedelta(minutes=1)).strftime(":%M")}' in response.text):
                 response.failure("No new messages sent in the last 60 seconds")
+    
+    @seq_task(6)
+    def get_survey_history(self):
+        with self.client.get("/surveys/history", cookies={"authorization": self.auth_cookie}, catch_response=True) as response:
+            if "Period covered" not in response.text:
+                response.failure("Couldn't load survey history page")
+            if "No items to show" not in response.text:
+                response.failure("User has survey history somehow")
 
 class FrontstageLocust(HttpLocust):
   task_set = FrontstageTasks
