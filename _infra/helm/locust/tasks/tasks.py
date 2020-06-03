@@ -10,7 +10,7 @@ import logging
 import csv
 import random
 import re
-from datetime import timezone, datetime
+from datetime import timezone, datetime, timedelta
 from functools import partial
 
 survey_short_name = 'QBS'
@@ -403,12 +403,27 @@ class FrontstageTasks(TaskSequence):
             self.create_message_link = re.search('\/secure-message\/create-message\/[^\"]*', response.text).group(0)
     
     @seq_task(2)
-    def create_secure_message(self):
+    def create_secure_message_page(self):
         with self.client.get(self.create_message_link, cookies={"authorization": self.auth_cookie}, catch_response=True) as response:
             if 'To: ONS Business Surveys team' not in response.text:
                 response.failure("Couldn't find To: when sending Secure Message")
             if 'id="send-message-btn"' not in response.text:
                 response.failure("Couldn't find Secure Message Send button")
+    
+    @seq_task(3)
+    def create_secure_message(self):
+        data = {
+            "subject": "Performance Test",
+            "body": "This is a performance test",
+            "send": "send"
+        }
+
+        with self.client.post(self.create_message_link, cookies={"authorization": self.auth_cookie}, data=data, catch_response=True) as response:
+            d = datetime.today()
+            if 'first_name last_name' not in response.text:
+                response.failure("Not returned to the messages tab with a thread with our name on it")
+            if not (f'{d.strftime(":%M")}' in response.text or f'{(d - timedelta(minutes=1)).strftime(":%M")}' in response.text):
+                response.failure("No new messages sent in the last 60 seconds")
 
 class FrontstageLocust(HttpLocust):
   task_set = FrontstageTasks
