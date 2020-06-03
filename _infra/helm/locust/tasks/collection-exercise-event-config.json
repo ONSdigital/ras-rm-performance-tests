@@ -1,0 +1,7 @@
+{
+    "inputFiles": ["locust-tasks/ce_event_details.csv"],
+    "columnMappings": {
+        "survey_code": "surveyRef",
+        "survey_period": "exerciseRef"
+    }
+}
