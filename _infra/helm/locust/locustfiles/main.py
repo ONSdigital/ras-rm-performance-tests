@@ -1,6 +1,5 @@
-from locust import HttpLocust, TaskSequence, seq_task, events, between
+from locust import HttpUser, SequentialTaskSet, task, events, between
 import datetime
-import sys
 import os
 import io
 import json
@@ -19,7 +18,7 @@ survey_ref = '139'
 form_type = '0001'
 eq_id = '2'
 period = '1806'
-respondents = int(os.getenv('TEST_RESPONDENTS'))
+respondents = int(os.getenv('test_respondents'))
 logger = logging.getLogger()
 
 # Ignore these during collection exercise event processing as they are the key 
@@ -28,28 +27,30 @@ ignore_columns = ['surveyRef', 'exerciseRef']
 
 # Load data for tests
 def load_data():
-    auth = (os.getenv('SECURITY_USER_NAME'), os.getenv('SECURITY_USER_PASSWORD'))
+    auth = (os.getenv('security_user_name'), os.getenv('security_user_password'))
 
     survey_id = load_survey(auth)
     load_collection_exercises(auth)
     load_collection_exercise_events(auth)
     load_and_link_collection_instrument(auth, survey_id)
-    sample_link_data = load_and_link_sample(auth)
+    load_and_link_sample(auth)
     execute_collection_exercise(auth, survey_id)
     register_users(auth)
 
 # Survey loading
 def load_survey(auth):
     logger.info('Trying to find survey %s', survey_short_name)
-    get_url = f"{os.getenv('SURVEY')}/surveys/shortname/{survey_short_name}"
+    get_url = f"{os.getenv('survey')}/surveys/shortname/{survey_short_name}"
     get_response = requests.get(get_url, auth=auth)
 
     if get_response.status_code != 404:
         get_data = json.loads(get_response.text)
         logger.info("Survey successfully found at id %s", get_data['id'])
         return get_data['id']
+    else:
+        logger.error("Couldn't find sutvey %s, status code %s, message %s", survey_short_name, get_response.status_code, get_response.text)
     
-    create_url = f"{os.getenv('SURVEY')}/surveys"
+    create_url = f"{os.getenv('survey')}/surveys"
     survey_details = {
         "surveyRef": survey_ref,
         "longName": survey_long_name,
@@ -108,10 +109,10 @@ def reformat_date(date):
 
 # Collection exercise loading
 def load_collection_exercises(auth):
-    config = json.load(open("locust-tasks/collection-exercise-config.json"))
+    config = json.load(open("/mnt/locust/collection-exercise-config.json"))
     input_files = config['inputFiles']
     column_mappings = config['columnMappings']
-    url = f"{os.getenv('COLLECTION_EXERCISE')}/collectionexercises"
+    url = f"{os.getenv('collection_exercise')}/collectionexercises"
 
     row_handler = partial(post_collection_exercise, url=url, auth=auth)
     
@@ -128,10 +129,10 @@ def post_collection_exercise(data, url, auth):
 
 # Collection exercise event loading
 def load_collection_exercise_events(auth):
-    config = json.load(open("locust-tasks/collection-exercise-event-config.json"))
+    config = json.load(open("/mnt/locust/collection-exercise-event-config.json"))
     input_files = config['inputFiles']
     column_mappings = config['columnMappings']
-    url = f"{os.getenv('COLLECTION_EXERCISE')}/collectionexercises"
+    url = f"{os.getenv('collection_exercise')}/collectionexercises"
 
     row_handler = partial(process_event_row, auth=auth, url=url)
     
@@ -165,7 +166,7 @@ def post_event(collection_exercise_id, event_tag, date, auth, url):
 # Collection instrument loading
 def load_and_link_collection_instrument(auth, survey_id):
     logger.info('Uploading eQ collection instrument', extra={'survey_id': survey_id, 'form_type': form_type})
-    post_url = f"{os.getenv('COLLECTION_INSTRUMENT')}/collection-instrument-api/1.0.2/upload"
+    post_url = f"{os.getenv('collection_instrument')}/collection-instrument-api/1.0.2/upload"
 
     post_classifiers = {
         "form_type": form_type,
@@ -179,7 +180,7 @@ def load_and_link_collection_instrument(auth, survey_id):
 
     post_response = requests.post(url=post_url, auth=auth, params=params)
     
-    get_url = f"{os.getenv('COLLECTION_INSTRUMENT')}/collection-instrument-api/1.0.2/collectioninstrument"
+    get_url = f"{os.getenv('collection_instrument')}/collection-instrument-api/1.0.2/collectioninstrument"
     get_classifiers = {
         "form_type": form_type,
         "SURVEY_ID": survey_id
@@ -188,12 +189,12 @@ def load_and_link_collection_instrument(auth, survey_id):
     get_response = requests.get(url=get_url, auth=auth, params={'searchString': json.dumps(get_classifiers)})
     get_response.raise_for_status()
 
-    collection_exercise_url = f"{os.getenv('COLLECTION_EXERCISE')}/collectionexercises"
+    collection_exercise_url = f"{os.getenv('collection_exercise')}/collectionexercises"
     collection_exercise_id = get_collection_exercise(survey_ref, period, collection_exercise_url, auth)['id']
 
     for ci in json.loads(get_response.text):
         logger.info('Linking collection instrument %s to exercise %s', ci['id'], period)
-        link_url = f"{os.getenv('COLLECTION_INSTRUMENT')}/collection-instrument-api/1.0.2/link-exercise/{ci['id']}/{collection_exercise_id}"
+        link_url = f"{os.getenv('collection_instrument')}/collection-instrument-api/1.0.2/link-exercise/{ci['id']}/{collection_exercise_id}"
         link_response = requests.post(url=link_url, auth=auth)
         link_response.raise_for_status()
     
@@ -203,20 +204,20 @@ def load_and_link_collection_instrument(auth, survey_id):
 def load_and_link_sample(auth):
     logger.info('Generating and loading sample for survey %s, period %s', survey_ref, period)
     sample = generate_sample_string(size=respondents)
-    collection_exercise_url = f"{os.getenv('COLLECTION_EXERCISE')}/collectionexercises"
+    collection_exercise_url = f"{os.getenv('collection_exercise')}/collectionexercises"
     collection_exercise_id = get_collection_exercise(survey_ref, period, collection_exercise_url, auth)['id']
-    sample_url = f"{os.getenv('SAMPLE')}/samples/B/fileupload"
+    sample_url = f"{os.getenv('sample_file_uploader')}/samples/fileupload"
     files = {'file': ('test_sample_file.xlxs', sample.encode('utf-8'), 'text/csv')}
 
     sample_response = requests.post(url=sample_url, auth=auth, files=files)
 
-    if sample_response.status_code != 201:
+    if sample_response.status_code != 202:
         logger.error('%s << Error uploading sample file for survey %s, period %s', sample_response.status_code, survey_ref, period)
         raise Exception('Failed to upload sample')
     
     sample_summary_id = sample_response.json()['id']
     logger.info('Successfully uploaded sample file for survey %s, period %s', survey_ref, period)
-    poll_url = f"{os.getenv('SAMPLE')}/samples/samplesummary/{sample_summary_id}"
+    poll_url = f"{os.getenv('sample')}/samples/samplesummary/{sample_summary_id}"
     attempt = 1
     ready = False
     while attempt <= 20 and not ready:
@@ -278,7 +279,7 @@ def generate_sample_string(size):
 
 # Collection exercise execution
 def execute_collection_exercise(auth, survey_id):
-    poll_url = f"{os.getenv('COLLECTION_EXERCISE')}/collectionexercises"
+    poll_url = f"{os.getenv('collection_exercise')}/collectionexercises"
     attempt = 1
     ready = False
     while attempt <= 20 and not ready:
@@ -295,7 +296,7 @@ def execute_collection_exercise(auth, survey_id):
         raise Exception('Failed to execute collection exercise')
 
     logger.info('Executing collection exercise %s on survey %s ', period, survey_ref)
-    execute_url = f"{os.getenv('COLLECTION_EXERCISE')}/collectionexerciseexecution/{data['id']}"
+    execute_url = f"{os.getenv('collection_exercise')}/collectionexerciseexecution/{data['id']}"
     response = requests.post(execute_url, auth=auth)
     response.raise_for_status()
 
@@ -308,16 +309,16 @@ def register_users(auth):
         email_address = sample_unit_ref + "@test.com"
         logger.info("Attempting to register user %s", email_address)
         
-        party_ru_url = f"{os.getenv('PARTY')}/party-api/v1/businesses/ref/{sample_unit_ref}"
+        party_ru_url = f"{os.getenv('party')}/party-api/v1/businesses/ref/{sample_unit_ref}"
         party_response = requests.get(party_ru_url, auth=auth)
         party_response.raise_for_status()
         ru_party_id = json.loads(party_response.text)['id']
 
         attempt = 1
         case_found = False
-        while attempt <= 20 and not case_found:
+        while attempt <= 60 and not case_found:
             logger.info('Polling to see if case for %s is ready to register against (attempt %s)', sample_unit_ref, attempt)
-            case_url = f"{os.getenv('CASE')}/cases/partyid/{ru_party_id}"
+            case_url = f"{os.getenv('case')}/cases/partyid/{ru_party_id}"
             case_response = requests.get(case_url, auth=auth, params={"iac": "true"})
             case_response.raise_for_status()
             if case_response.status_code == 200:
@@ -326,24 +327,24 @@ def register_users(auth):
                     iac = case_data['iac']
                     case_found = True
                 else:
-                    logger.info('IAC not found, waiting 3s')
+                    logger.info('IAC not found, waiting 5s')
                     attempt += 1
-                    time.sleep(3)
+                    time.sleep(5)
             else:
-                logger.info('Not found, waiting 3s')
+                logger.info('Not found, waiting 5s')
                 attempt += 1
-                time.sleep(3)
+                time.sleep(5)
 
         if not case_found:
             logger.error("Case never found for %s", sample_unit_ref)
             raise Exception("Case not found")
 
-        register_url = f"{os.getenv('PARTY')}/party-api/v1/respondents"
+        register_url = f"{os.getenv('party')}/party-api/v1/respondents"
         data = {
             'emailAddress': email_address,
             'firstName': 'first_name',
             'lastName': 'last_name',
-            'password': os.getenv('TEST_RESPONDENT_PASSWORD'),
+            'password': os.getenv('test_respondent_password'),
             'telephone': '09876543210',
             'enrolmentCode': iac
         }
@@ -354,14 +355,14 @@ def register_users(auth):
 
         respondent_id = json.loads(register_response.text)['id']
         activate_payload = {"status_change": "ACTIVE"}
-        activate_url = f"{os.getenv('PARTY')}/party-api/v1/respondents/edit-account-status/{respondent_id}"
+        activate_url = f"{os.getenv('party')}/party-api/v1/respondents/edit-account-status/{respondent_id}"
         activate_response = requests.put(activate_url, json=activate_payload, auth=auth)
         activate_response.raise_for_status()
         logger.info("Successfully registered and activated user %s", email_address)
 
 def data_loaded():
-    auth = (os.getenv('SECURITY_USER_NAME'), os.getenv('SECURITY_USER_PASSWORD'))
-    url = f"{os.getenv('PARTY')}/party-api/v1/respondents?emailAddress={'499'+format(str(0), '0>8s')+'@test.com'}"
+    auth = (os.getenv('security_user_name'), os.getenv('security_user_password'))
+    url = f"{os.getenv('party')}/party-api/v1/respondents?emailAddress={'499'+format(str(0), '0>8s')+'@test.com'}"
     response = requests.get(url, auth=auth)
     if response.status_code != 200:
         logger.info("Loading data because Party check returned %s", response.status_code)
@@ -375,12 +376,12 @@ def data_loaded():
         return False
     return True
 
-# This will only be run on Master and should be used for loading test data
-if '--master' in sys.argv:
-  if not data_loaded():
+# This will only be run on Master
+@events.test_start.add_listener
+def on_test_start(**kwargs):
     load_data()
 
-class FrontstageTasks(TaskSequence):
+class FrontstageTasks(SequentialTaskSet):
     create_message_link = None
     view_message_thread_link = None
     def on_start(self):
@@ -388,11 +389,11 @@ class FrontstageTasks(TaskSequence):
 
     def login(self):
         sample_unit_ref = '499' + format(str(random.randint(0, respondents)), "0>8s")
-        data = {'username': sample_unit_ref + "@test.com", 'password': os.getenv('TEST_RESPONDENT_PASSWORD')}
+        data = {'username': sample_unit_ref + "@test.com", 'password': os.getenv('test_respondent_password')}
         response = self.client.post("/sign-in/?next=", data=data, catch_response=True, allow_redirects=False)
         self.auth_cookie = response.cookies['authorization']
 
-    @seq_task(1)
+    @task(1)
     def surveys_todo(self):
         with self.client.get("/surveys/todo", cookies={"authorization": self.auth_cookie}, catch_response=True) as response:
             if 'Sign in' in response.text:
@@ -403,7 +404,7 @@ class FrontstageTasks(TaskSequence):
                 response.failure("QBS survey not found in list")
             self.create_message_link = re.search('\/secure-message\/create-message\/[^\"]*', response.text).group(0)
     
-    @seq_task(2)
+    @task(2)
     def create_secure_message_page(self):
         with self.client.get(self.create_message_link, cookies={"authorization": self.auth_cookie}, catch_response=True) as response:
             if 'To: ONS Business Surveys team' not in response.text:
@@ -411,7 +412,7 @@ class FrontstageTasks(TaskSequence):
             if 'id="send-message-btn"' not in response.text:
                 response.failure("Couldn't find Secure Message Send button")
     
-    @seq_task(3)
+    @task(3)
     def create_secure_message(self):
         data = {
             "subject": "Performance Test",
@@ -427,13 +428,13 @@ class FrontstageTasks(TaskSequence):
                 response.failure("No new messages sent in the last 60 seconds")
             self.view_message_thread_link = re.search('\/secure-message\/threads\/[^\"]*#latest-message', response.text).group(0)
     
-    @seq_task(4)
+    @task(4)
     def view_message_thread(self):
         with self.client.get(self.view_message_thread_link, cookies={"authorization": self.auth_cookie}, catch_response=True) as response:
             if 'This is a performance test' not in response.text:
                 response.failure("Can't find message body in message thread")    
 
-    @seq_task(5)
+    @task(5)
     def reply_to_message_thread(self):
         reply_link = self.view_message_thread_link.split('#latest-message')[0]
         data = {
@@ -448,7 +449,7 @@ class FrontstageTasks(TaskSequence):
             if not (f'{d.strftime(":%M")}' in response.text or f'{(d - timedelta(minutes=1)).strftime(":%M")}' in response.text):
                 response.failure("No new messages sent in the last 60 seconds")
     
-    @seq_task(6)
+    @task(6)
     def get_survey_history(self):
         with self.client.get("/surveys/history", cookies={"authorization": self.auth_cookie}, catch_response=True) as response:
             if "Period covered" not in response.text:
@@ -456,6 +457,6 @@ class FrontstageTasks(TaskSequence):
             if "No items to show" not in response.text:
                 response.failure("User has survey history somehow")
 
-class FrontstageLocust(HttpLocust):
-  task_set = FrontstageTasks
+class FrontstageLocust(HttpUser):
+  tasks = {FrontstageTasks}
   wait_time = between(5, 15)
