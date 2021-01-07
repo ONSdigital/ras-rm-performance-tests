@@ -5,7 +5,7 @@ on:
     types: [created]
 
 env:
-  SERVICE: print-file
+  SERVICE: locust
 
 jobs:
   comment:
