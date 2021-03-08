@@ -3,15 +3,15 @@ locust:
     name: performance-test
     locust_locustfile: main.py
     locust_locustfile_configmap: locust-worker
-    locust_host: http://frontstage.crockerm.svc.cluster.local:9000
+    locust_host: http://frontstage.performance.svc.cluster.local:9000
     environment:
-      case: http://case.crockerm.svc.cluster.local:8080
-      collection_exercise: http://collection-exercise.crockerm.svc.cluster.local:8080
-      collection_instrument: http://collection-instrument.crockerm.svc.cluster.local:8080
-      party: http://party.crockerm.svc.cluster.local:8080
-      sample: http://sample.crockerm.svc.cluster.local:8080
-      sample_file_uploader: http://sample-file-uploader.crockerm.svc.cluster.local:8080
-      survey: http://survey.crockerm.svc.cluster.local:8080
+      case: http://case.performance.svc.cluster.local:8080
+      collection_exercise: http://collection-exercise.performance.svc.cluster.local:8080
+      collection_instrument: http://collection-instrument.performance.svc.cluster.local:8080
+      party: http://party.performance.svc.cluster.local:8080
+      sample: http://sample.performance.svc.cluster.local:8080
+      sample_file_uploader: http://sample-file-uploader.performance.svc.cluster.local:8080
+      survey: http://survey.performance.svc.cluster.local:8080
       security_user_name: admin
       security_user_password: secret
       test_respondent_password: password
