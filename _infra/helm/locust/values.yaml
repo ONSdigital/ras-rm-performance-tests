@@ -1,6 +1,7 @@
 locust:
   loadtest:
     name: performance-test
+    headless: true
     locust_locustfile: main.py
     locust_locustfile_configmap: locust-worker
     locust_host: http://frontstage.performance.svc.cluster.local:9000
@@ -16,6 +17,16 @@ locust:
       security_user_password: secret
       test_respondent_password: password
       test_respondents: 5
+
+  master:
+    environment:
+      LOCUST_USERS: 10000
+      LOCUST_SPAWN_RATE: 100
+      LOCUST_RUN_TIME: 10m
+      LOCUST_ONLY_SUMMARY: true
+      LOCUST_CSV: rasrm
+      LOCUST_HTLM: rasrm.html
+
 
   worker:
     replicas: 5
