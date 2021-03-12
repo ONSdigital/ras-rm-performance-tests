@@ -26,7 +26,7 @@ locust:
     environment:
       LOCUST_USERS: 1000
       LOCUST_SPAWN_RATE: 100
-      LOCUST_RUN_TIME: 5m
+      LOCUST_RUN_TIME: 3600m
       LOCUST_ONLY_SUMMARY: true
       LOCUST_CSV: rasrm
 
