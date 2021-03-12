@@ -5,6 +5,8 @@ locust:
     locust_locustfile: main.py
     locust_locustfile_configmap: locust-worker
     locust_host: http://frontstage.performance.svc.cluster.local:9000
+    pip_packages:
+      - google-cloud-storage
     environment:
       case: http://case.performance.svc.cluster.local:8080
       collection_exercise: http://collection-exercise.performance.svc.cluster.local:8080
@@ -17,22 +19,23 @@ locust:
       security_user_password: secret
       test_respondent_password: password
       test_respondents: 5
+      GOOGLE_CLOUD_PROJECT: "ras-rm-performance-tests"
+      GCS_BUCKET_NAME: "ras-rm-performance-results"
 
   master:
     environment:
-      LOCUST_USERS: 10000
+      LOCUST_USERS: 1000
       LOCUST_SPAWN_RATE: 100
-      LOCUST_RUN_TIME: 10m
+      LOCUST_RUN_TIME: 5m
       LOCUST_ONLY_SUMMARY: true
       LOCUST_CSV: rasrm
-      LOCUST_HTLM: rasrm.html
 
 
   worker:
     replicas: 5
     strategy:
       type: RollingUpdate
-  
+
   image:
     repository: locustio/locust
     tag: 1.4.1
