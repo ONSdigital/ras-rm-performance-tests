@@ -47,12 +47,13 @@ def load_survey(auth):
     get_url = f"{os.getenv('survey')}/surveys/shortname/{survey_short_name}"
     get_response = requests.get(get_url, auth=auth)
 
+    logger.info(f"Response {get_response.text}")
     if get_response.status_code != 404:
-        get_data = json.loads(get_response.text)
+        get_data = get_response.json()
         logger.info("Survey successfully found at id %s", get_data['id'])
         return get_data['id']
     else:
-        logger.error("Couldn't find sutvey %s, status code %s, message %s", survey_short_name, get_response.status_code, get_response.text)
+        logger.error("Couldn't find survey %s, status code %s, message %s", survey_short_name, get_response.status_code, get_response.text)
     
     create_url = f"{os.getenv('survey')}/surveys"
     survey_details = {
@@ -158,7 +159,7 @@ def process_event_row(data, auth, url):
 
 def get_collection_exercise(survey_ref, exercise_ref, url, auth):
     response = requests.get(f'{url}/{exercise_ref}/survey/{survey_ref}', auth=auth, verify=False)
-    data = json.loads(response.text)
+    data = response.json()
 
     if "error" in data:
         logger.error("Error getting collection exercise ID for survey %s, exercise %s, error %s", survey_ref, exercise_ref, data['error'])
