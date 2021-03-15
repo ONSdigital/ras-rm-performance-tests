@@ -1,4 +1,3 @@
-from locust import HttpUser, SequentialTaskSet, task, events, between
 import datetime
 import os
 import io
@@ -9,7 +8,10 @@ import logging
 import csv
 import random
 import re
+
 from datetime import timezone, datetime, timedelta
+from locust import HttpUser, SequentialTaskSet, task, events, between
+from google.cloud import storage
 from functools import partial
 
 survey_short_name = 'QBS'
@@ -25,6 +27,7 @@ logger = logging.getLogger()
 # for the collection exercise and don't represent event data
 ignore_columns = ['surveyRef', 'exerciseRef']
 
+
 # Load data for tests
 def load_data():
     auth = (os.getenv('security_user_name'), os.getenv('security_user_password'))
@@ -37,18 +40,20 @@ def load_data():
     execute_collection_exercise(auth, survey_id)
     register_users(auth)
 
+
 # Survey loading
 def load_survey(auth):
     logger.info('Trying to find survey %s', survey_short_name)
     get_url = f"{os.getenv('survey')}/surveys/shortname/{survey_short_name}"
     get_response = requests.get(get_url, auth=auth)
 
+    logger.info(f"Response {get_response.text}")
     if get_response.status_code != 404:
-        get_data = json.loads(get_response.text)
+        get_data = get_response.json()
         logger.info("Survey successfully found at id %s", get_data['id'])
         return get_data['id']
     else:
-        logger.error("Couldn't find sutvey %s, status code %s, message %s", survey_short_name, get_response.status_code, get_response.text)
+        logger.error("Couldn't find survey %s, status code %s, message %s", survey_short_name, get_response.status_code, get_response.text)
     
     create_url = f"{os.getenv('survey')}/surveys"
     survey_details = {
@@ -69,6 +74,7 @@ def load_survey(auth):
     logger.info("Successfully created survey at id %s", create_data['id'])
     return create_data['id']
 
+
 # Helper methods for Collection exercise/event mapping
 def map_columns(column_mappings, row):
     new_row = dict()
@@ -80,6 +86,7 @@ def map_columns(column_mappings, row):
            new_row[key] = value 
     return new_row
 
+
 def process_files(file_list, row_handler, column_mappings):
     for filename in file_list:
         with open(filename) as fp:
@@ -89,6 +96,7 @@ def process_files(file_list, row_handler, column_mappings):
 
                 if new_row:
                     row_handler(data=new_row)
+
 
 def reformat_date(date):
     if len(date) == 5:
@@ -107,6 +115,7 @@ def reformat_date(date):
     time_str = raw.isoformat(timespec='milliseconds')
     return time_str
 
+
 # Collection exercise loading
 def load_collection_exercises(auth):
     config = json.load(open("/mnt/locust/collection-exercise-config.json"))
@@ -119,6 +128,7 @@ def load_collection_exercises(auth):
     logger.info('Posting collection exercises')
     process_files(input_files, row_handler, column_mappings)
 
+
 def post_collection_exercise(data, url, auth):
     response = requests.post(url, json=data, auth=auth, verify=False)
 
@@ -126,6 +136,7 @@ def post_collection_exercise(data, url, auth):
     detail_text = response.text if status_code != 201 else ''
 
     logger.info("%s <= %s (%s)", status_code, data, detail_text)
+
 
 # Collection exercise event loading
 def load_collection_exercise_events(auth):
@@ -138,20 +149,23 @@ def load_collection_exercise_events(auth):
     
     process_files(input_files, row_handler, column_mappings)
 
+
 def process_event_row(data, auth, url):
     collection_exercise_id = get_collection_exercise(survey_ref=data['surveyRef'], exercise_ref=data['exerciseRef'], url=url, auth=auth)['id']
     for event_tag, date in data.items():
         if not event_tag in ignore_columns:
             post_event(collection_exercise_id, event_tag, date, auth, url)
 
+
 def get_collection_exercise(survey_ref, exercise_ref, url, auth):
     response = requests.get(f'{url}/{exercise_ref}/survey/{survey_ref}', auth=auth, verify=False)
-    data = json.loads(response.text)
+    data = response.json()
 
     if "error" in data:
         logger.error("Error getting collection exercise ID for survey %s, exercise %s, error %s", survey_ref, exercise_ref, data['error'])
     else:
         return data
+
 
 def post_event(collection_exercise_id, event_tag, date, auth, url):
     data = {"tag": event_tag, "timestamp": reformat_date(date)}
@@ -162,6 +176,7 @@ def post_event(collection_exercise_id, event_tag, date, auth, url):
     detail_text = response.text if status_code != 201 else ''
 
     logger.info("%s <= %s (%s)", status_code, data, detail_text)
+
 
 # Collection instrument loading
 def load_and_link_collection_instrument(auth, survey_id):
@@ -200,6 +215,7 @@ def load_and_link_collection_instrument(auth, survey_id):
     
     logger.info('Successfully linked collection instruments to exercise %s', period)
 
+
 # Sample generation/loading/linking
 def load_and_link_sample(auth):
     logger.info('Generating and loading sample for survey %s, period %s', survey_ref, period)
@@ -237,6 +253,7 @@ def load_and_link_sample(auth):
     collection_exercise_response = requests.put(f'{collection_exercise_url}/link/{collection_exercise_id}', auth=auth, json=data)
     collection_exercise_response.raise_for_status()
     logger.info('Successfully linked sample summary with collection exercise %s', period)
+
 
 def generate_sample_string(size):
     output = io.StringIO()
@@ -277,6 +294,7 @@ def generate_sample_string(size):
     
     return output.getvalue()
 
+
 # Collection exercise execution
 def execute_collection_exercise(auth, survey_id):
     poll_url = f"{os.getenv('collection_exercise')}/collectionexercises"
@@ -301,6 +319,7 @@ def execute_collection_exercise(auth, survey_id):
     response.raise_for_status()
 
     logger.info('Collection exerise %s on survey %s executed', period, survey_ref)
+
 
 # Register respondent accounts
 def register_users(auth):
@@ -358,7 +377,9 @@ def register_users(auth):
         activate_url = f"{os.getenv('party')}/party-api/v1/respondents/edit-account-status/{respondent_id}"
         activate_response = requests.put(activate_url, json=activate_payload, auth=auth)
         activate_response.raise_for_status()
+
         logger.info("Successfully registered and activated user %s", email_address)
+
 
 def data_loaded():
     auth = (os.getenv('security_user_name'), os.getenv('security_user_password'))
@@ -376,14 +397,32 @@ def data_loaded():
         return False
     return True
 
+
 # This will only be run on Master
 @events.test_start.add_listener
 def on_test_start(**kwargs):
     load_data()
 
+
+@events.test_stop.add_listener
+def on_test_stop(**kwargs):
+    gcs = GoogleCloudStorage()
+    failures = "rasrm_failures.csv"
+    stats = "rasrm_stats.csv"
+    history = " rasrm_stats_history.csv"
+
+    with open(failures) as f:
+        gcs.upload(file_name=failures, file=f.read())
+    with open(stats) as s:
+        gcs.upload(file_name=stats, file=s.read())
+    with open(history) as h:
+        gcs.upload(file_name=history, file=h.read())
+
+
 class FrontstageTasks(SequentialTaskSet):
     create_message_link = None
     view_message_thread_link = None
+
     def on_start(self):
         self.login()
 
@@ -457,6 +496,24 @@ class FrontstageTasks(SequentialTaskSet):
             if "No items to show" not in response.text:
                 response.failure("User has survey history somehow")
 
+
 class FrontstageLocust(HttpUser):
-  tasks = {FrontstageTasks}
-  wait_time = between(5, 15)
+    tasks = {FrontstageTasks}
+    wait_time = between(5, 15)
+
+
+class GoogleCloudStorage:
+
+    def __init__(self):
+        self.project_id = os.getenv('GOOGLE_CLOUD_PROJECT')
+        self.bucket_name = os.getenv('GCS_BUCKET_NAME')
+        self.client = storage.Client(project=self.project_id)
+        self.bucket = self.client.bucket(self.bucket_name)
+
+    def upload(self, file_name, file):
+        path = datetime.utcnow().strftime("%d-%m-%y-%H-%M-%S") + "/" + file_name
+        blob = self.bucket.blob(path)
+        blob.upload_from_string(
+            data=file,
+            content_type='application/csv'
+        )
