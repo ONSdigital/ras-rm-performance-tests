@@ -48,11 +48,12 @@ def load_survey(auth):
     get_response = requests.get(get_url, auth=auth)
 
     logger.info(f"Response {get_response.text}")
-    if get_response.status_code != 404:
+    try:
+        get_response.raise_for_status()
         get_data = get_response.json()
         logger.info("Survey successfully found at id %s", get_data['id'])
         return get_data['id']
-    else:
+    except requests.exceptions.HTTPError:
         logger.error("Couldn't find survey %s, status code %s, message %s", survey_short_name, get_response.status_code, get_response.text)
     
     create_url = f"{os.getenv('survey')}/surveys"
@@ -69,10 +70,16 @@ def load_survey(auth):
     }
 
     create_response = requests.post(create_url, json=survey_details, auth=auth)
-    create_response.raise_for_status()
-    create_data = json.loads(create_response.text)
-    logger.info("Successfully created survey at id %s", create_data['id'])
-    return create_data['id']
+    try:
+        create_response.raise_for_status()
+        create_data = json.loads(create_response.text)
+        logger.info("Successfully created survey at id %s", create_data['id'])
+        return create_data['id']
+    except requests.exceptions.HTTPError:
+        if create_response.status_code == 409:
+            # it exists try to retrieve it again
+            return load_survey(auth)
+        logger.exception("failed to obtain survey id")
 
 
 # Helper methods for Collection exercise/event mapping
@@ -161,12 +168,16 @@ def process_event_row(data, auth, url):
 
 def get_collection_exercise(survey_ref, exercise_ref, url, auth):
     response = requests.get(f'{url}/{exercise_ref}/survey/{survey_ref}', auth=auth, verify=False)
-    data = response.json()
 
-    if "error" in data:
-        logger.error("Error getting collection exercise ID for survey %s, exercise %s, error %s", survey_ref, exercise_ref, data['error'])
-    else:
-        return data
+    try:
+        data = response.json()
+        if "error" in data:
+            logger.error("Error getting collection exercise ID for survey %s, exercise %s, error %s", survey_ref,
+                         exercise_ref, data['error'])
+        else:
+            return data
+    except requests.exceptions.HTTPError:
+        logger.exception("Error getting collection exercise data")
 
 
 def post_event(collection_exercise_id, event_tag, date, auth, url):
@@ -207,23 +218,26 @@ def load_and_link_collection_instrument(auth, survey_id):
     get_response.raise_for_status()
 
     collection_exercise_url = f"{os.getenv('collection_exercise')}/collectionexercises"
-    collection_exercise_id = get_collection_exercise(survey_ref, period, collection_exercise_url, auth)['id']
+    collection_exercise = get_collection_exercise(survey_ref, period, collection_exercise_url, auth)
+    if collection_exercise:
+        collection_exercise_id = collection_exercise['id']
 
-    for ci in json.loads(get_response.text):
-        logger.info('Linking collection instrument %s to exercise %s', ci['id'], period)
-        link_url = f"{os.getenv('collection_instrument')}/collection-instrument-api/1.0.2/link-exercise/{ci['id']}/{collection_exercise_id}"
-        link_response = requests.post(url=link_url, auth=auth)
-        link_response.raise_for_status()
-    
-    logger.info('Successfully linked collection instruments to exercise %s', period)
+        for ci in json.loads(get_response.text):
+            logger.info('Linking collection instrument %s to exercise %s', ci['id'], period)
+            link_url = f"{os.getenv('collection_instrument')}/collection-instrument-api/1.0.2/link-exercise/{ci['id']}/{collection_exercise_id}"
+            link_response = requests.post(url=link_url, auth=auth)
+            link_response.raise_for_status()
+
+        logger.info('Successfully linked collection instruments to exercise %s', period)
+    else:
+        logger.error("Error retrieving collection exercise")
 
 
 # Sample generation/loading/linking
 def load_and_link_sample(auth):
     logger.info('Generating and loading sample for survey %s, period %s', survey_ref, period)
     sample = generate_sample_string(size=respondents)
-    collection_exercise_url = f"{os.getenv('collection_exercise')}/collectionexercises"
-    collection_exercise_id = get_collection_exercise(survey_ref, period, collection_exercise_url, auth)['id']
+
     sample_url = f"{os.getenv('sample_file_uploader')}/samples/fileupload"
     files = {'file': ('test_sample_file.xlxs', sample.encode('utf-8'), 'text/csv')}
 
@@ -252,9 +266,15 @@ def load_and_link_sample(auth):
         raise Exception('Failed to execute collection exercise')
 
     data = {'sampleSummaryIds': [str(sample_summary_id)]}
-    collection_exercise_response = requests.put(f'{collection_exercise_url}/link/{collection_exercise_id}', auth=auth, json=data)
-    collection_exercise_response.raise_for_status()
-    logger.info('Successfully linked sample summary with collection exercise %s', period)
+    collection_exercise_url = f"{os.getenv('collection_exercise')}/collectionexercises"
+    collection_exercise = get_collection_exercise(survey_ref, period, collection_exercise_url, auth)
+    if collection_exercise:
+        collection_exercise_id = collection_exercise['id']
+        collection_exercise_response = requests.put(f'{collection_exercise_url}/link/{collection_exercise_id}', auth=auth, json=data)
+        collection_exercise_response.raise_for_status()
+        logger.info('Successfully linked sample summary with collection exercise %s', period)
+    else:
+        logger.error("failed to link sample summary with collection exercise")
 
 
 def generate_sample_string(size):
@@ -305,9 +325,13 @@ def execute_collection_exercise(auth, survey_id):
     while attempt <= 20 and not ready:
         logger.info('Polling to see if collection exercise %s is ready to execute (attempt %s)', period, attempt)
         data = get_collection_exercise(survey_ref, period, poll_url, auth)
-        ready = data['state'] == 'READY_FOR_REVIEW'
+        if data:
+            ready = data['state'] == 'READY_FOR_REVIEW'
         if not ready:
-            logger.info('Not ready, current state is %s, waiting 3s', data['state'])
+            if data:
+                logger.info('Not ready, current state is %s, waiting 3s', data['state'])
+            else:
+                logger.info('Not ready waiting 3s')
             attempt += 1
             time.sleep(3)
 
