@@ -151,10 +151,12 @@ def load_collection_exercise_events(auth):
 
 
 def process_event_row(data, auth, url):
-    collection_exercise_id = get_collection_exercise(survey_ref=data['surveyRef'], exercise_ref=data['exerciseRef'], url=url, auth=auth)['id']
-    for event_tag, date in data.items():
-        if not event_tag in ignore_columns:
-            post_event(collection_exercise_id, event_tag, date, auth, url)
+    collection_exercise = get_collection_exercise(survey_ref=data['surveyRef'], exercise_ref=data['exerciseRef'], url=url, auth=auth)
+    if collection_exercise:
+        collection_exercise_id = ['id']
+        for event_tag, date in data.items():
+            if event_tag not in ignore_columns:
+                post_event(collection_exercise_id, event_tag, date, auth, url)
 
 
 def get_collection_exercise(survey_ref, exercise_ref, url, auth):
