@@ -170,6 +170,7 @@ def get_collection_exercise(survey_ref, exercise_ref, url, auth):
     response = requests.get(f'{url}/{exercise_ref}/survey/{survey_ref}', auth=auth, verify=False)
 
     try:
+        response.raise_for_status()
         data = response.json()
         if "error" in data:
             logger.error("Error getting collection exercise ID for survey %s, exercise %s, error %s", survey_ref,
