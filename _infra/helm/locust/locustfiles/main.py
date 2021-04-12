@@ -160,7 +160,7 @@ def load_collection_exercise_events(auth):
 def process_event_row(data, auth, url):
     collection_exercise = get_collection_exercise(survey_ref=data['surveyRef'], exercise_ref=data['exerciseRef'], url=url, auth=auth)
     if collection_exercise:
-        collection_exercise_id = ['id']
+        collection_exercise_id = collection_exercise['id']
         for event_tag, date in data.items():
             if event_tag not in ignore_columns:
                 post_event(collection_exercise_id, event_tag, date, auth, url)
