@@ -30,7 +30,7 @@ jobs:
       - name: add helm repo
         run: |
           helm repo add deliveryhero https://charts.deliveryhero.io/
-       - name: template helm
+      - name: template helm
         run: |
           helm template $CHART_DIRECTORY
       - name: Set current tag
