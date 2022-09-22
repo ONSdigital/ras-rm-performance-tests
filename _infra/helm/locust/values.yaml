@@ -19,8 +19,8 @@ locust:
       security_user_password: secret
       test_respondent_password: password
       test_respondents: 5
-      GOOGLE_CLOUD_PROJECT: "ras-rm-performance-tests"
-      GCS_BUCKET_NAME: "ras-rm-performance-results"
+      GOOGLE_CLOUD_PROJECT: "ras-rm-performance-20220908"
+      GCS_BUCKET_NAME: "ras-rm-performance-20220908-results"
 
   master:
     environment:
