@@ -32,7 +32,7 @@ locust:
 
 
   worker:
-    replicas: 5
+    replicas: 0
     strategy:
       type: RollingUpdate
 
