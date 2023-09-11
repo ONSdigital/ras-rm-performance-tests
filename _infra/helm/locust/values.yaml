@@ -24,9 +24,9 @@ locust:
 
   master:
     environment:
-      LOCUST_USERS: 1000
-      LOCUST_SPAWN_RATE: 100
-      LOCUST_RUN_TIME: 5m
+      LOCUST_USERS: 1
+      LOCUST_SPAWN_RATE: 1
+      LOCUST_RUN_TIME: 1m
       LOCUST_ONLY_SUMMARY: true
       LOCUST_CSV: rasrm
 
@@ -38,4 +38,4 @@ locust:
 
   image:
     repository: locustio/locust
-    tag: 1.4.1
+    tag: 2.16.1
