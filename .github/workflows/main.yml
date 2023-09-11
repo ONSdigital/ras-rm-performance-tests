@@ -25,7 +25,7 @@ jobs:
           token: ${{ secrets.BOT_TOKEN }}
       - uses: google-github-actions/setup-gcloud@v0
         with:
-          version: '290.0.0'
+          version: '444.0.0'
           service_account_key: ${{ secrets.GCR_KEY }}
       - name: add helm repo
         run: |
