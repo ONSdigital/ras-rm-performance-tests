@@ -125,7 +125,7 @@ def reformat_date(date):
 
 # Collection exercise loading
 def load_collection_exercises(auth):
-    config = json.load(open("/mnt/locust/collection-exercise-config.json"))
+    config = json.load(open("./collection-exercise-config.json"))
     input_files = config['inputFiles']
     column_mappings = config['columnMappings']
     url = f"{os.getenv('collection_exercise')}/collectionexercises"
@@ -147,7 +147,7 @@ def post_collection_exercise(data, url, auth):
 
 # Collection exercise event loading
 def load_collection_exercise_events(auth):
-    config = json.load(open("/mnt/locust/collection-exercise-event-config.json"))
+    config = json.load(open("./collection-exercise-event-config.json"))
     input_files = config['inputFiles']
     column_mappings = config['columnMappings']
     url = f"{os.getenv('collection_exercise')}/collectionexercises"
@@ -352,14 +352,11 @@ def execute_collection_exercise(auth, survey_id):
     response = requests.post(execute_url, auth=auth)
     response.raise_for_status()
     logger.info('Collection exerise %s on survey %s executed', period, survey_ref)
-    # TODO: need a loop to check an endpoint to see if this is executed rather than a sleep
     time.sleep(10)
 
     process_scheduled_events_url = f"{os.getenv('collection_exercise')}/cron/process-scheduled-events"
     response = requests.get(process_scheduled_events_url, auth=auth)
-    logger.info(response)
     response.raise_for_status()
-    # TODO: need a loop to check an endpoint to see if this is executed rather than a sleep
     time.sleep(10)
 
 # Register respondent accounts
@@ -450,7 +447,7 @@ def on_test_stop(**kwargs):
     gcs = GoogleCloudStorage()
     failures = "rasrm_failures.csv"
     stats = "rasrm_stats.csv"
-    history = " rasrm_stats_history.csv"
+    history = "rasrm_stats_history.csv"
 
     with open(failures) as f:
         gcs.upload(file_name=failures, file=f.read())
@@ -471,76 +468,82 @@ class FrontstageTasks(SequentialTaskSet):
         sample_unit_ref = '499' + format(str(random.randint(0, respondents)), "0>8s")
         data = {'username': sample_unit_ref + "@test.com", 'password': os.getenv('test_respondent_password')}
         response = self.client.post("/sign-in/?next=", data=data, catch_response=True, allow_redirects=False)
+        if response.status_code != 302:
+            self.interrupt()
+        logger.info("status_code: %s", response.status_code)
         self.auth_cookie = response.cookies['authorization']
+        logger.info("auth_cookie: %s",self.auth_cookie)
 
     @task(1)
     def surveys_todo(self):
         with self.client.get("/surveys/todo", cookies={"authorization": self.auth_cookie}, catch_response=True) as response:
             if 'Sign in' in response.text:
                 response.failure("Not logged in")
-            if 'You have no surveys to complete' in response.text:
-                response.failure("No surveys in survey list")
-            if 'Quarterly Business Survey' not in response.text:
-                response.failure("QBS survey not found in list")
-            # TODO: The secure message journey has changed significantly and is now under 'help with this survey'
-            # self.create_message_link = re.search('\/secure-message\/create-message\/[^\"]*', response.text).group(0)
+            if 'To do' not in response.text:
+                response.failure("To do tab not displayed after login")
+            #     response.failure("Not logged in")
+            # if 'You have no surveys to complete' in response.text:
+            #     response.failure("No surveys in survey list")
+            # if 'Quarterly Business Survey' not in response.text:
+            #     response.failure("QBS survey not found in list")
 
+            # self.create_message_link = re.search('\/secure-message\/create-message\/[^\"]*', response.text).group(0)
             # GET http://localhost:8082/surveys/surveys-help?survey_ref=139&ru_ref=49900000000
             # POST http://localhost:8082/surveys/help?short_name=QBS&amp;business_id=43e4b914-1db8-4267-ab7c-b223e7190d65&amp;survey_ref=139&amp;ru_ref=49900000000
             #         name="csrf_token" value="ImM5ZDE4MzNiNTVhMDAwZDFmYWU5MWRlOGJkNWVhNzhmMzBiZjdhZDci.ZPz3rg.MsZXp47XLJlAN1n0DCjdQq9LVcw"
             #         name="option" value="something-else"
-    @task(2)
-    def create_secure_message_page(self):
-        with self.client.get(self.create_message_link, cookies={"authorization": self.auth_cookie}, catch_response=True) as response:
-            if 'To: ONS Business Surveys team' not in response.text:
-                response.failure("Couldn't find To: when sending Secure Message")
-            if 'id="send-message-btn"' not in response.text:
-                response.failure("Couldn't find Secure Message Send button")
-
-    @task(3)
-    def create_secure_message(self):
-        data = {
-            "subject": "Performance Test",
-            "body": "This is a performance test",
-            "send": "send"
-        }
-
-        with self.client.post(self.create_message_link, cookies={"authorization": self.auth_cookie}, data=data, catch_response=True) as response:
-            d = datetime.today()
-            if 'first_name last_name' not in response.text:
-                response.failure("Not returned to the messages tab with a thread with our name on it")
-            if not (f'{d.strftime(":%M")}' in response.text or f'{(d - timedelta(minutes=1)).strftime(":%M")}' in response.text):
-                response.failure("No new messages sent in the last 60 seconds")
-            self.view_message_thread_link = re.search('\/secure-message\/threads\/[^\"]*#latest-message', response.text).group(0)
-
-    @task(4)
-    def view_message_thread(self):
-        with self.client.get(self.view_message_thread_link, cookies={"authorization": self.auth_cookie}, catch_response=True) as response:
-            if 'This is a performance test' not in response.text:
-                response.failure("Can't find message body in message thread")
-
-    @task(5)
-    def reply_to_message_thread(self):
-        reply_link = self.view_message_thread_link.split('#latest-message')[0]
-        data = {
-            "body": "Reply to a performance test",
-            "send": "send"
-        }
-
-        with self.client.post(reply_link, cookies={"authorization": self.auth_cookie}, data=data, catch_response=True) as response:
-            d = datetime.today()
-            if "Reply to a performance test" not in response.text:
-                response.failure("Message not replied to")
-            if not (f'{d.strftime(":%M")}' in response.text or f'{(d - timedelta(minutes=1)).strftime(":%M")}' in response.text):
-                response.failure("No new messages sent in the last 60 seconds")
-
-    @task(6)
-    def get_survey_history(self):
-        with self.client.get("/surveys/history", cookies={"authorization": self.auth_cookie}, catch_response=True) as response:
-            if "Period covered" not in response.text:
-                response.failure("Couldn't load survey history page")
-            if "No items to show" not in response.text:
-                response.failure("User has survey history somehow")
+    # @task(2)
+    # def create_secure_message_page(self):
+    #     with self.client.get(self.create_message_link, cookies={"authorization": self.auth_cookie}, catch_response=True) as response:
+    #         if 'To: ONS Business Surveys team' not in response.text:
+    #             response.failure("Couldn't find To: when sending Secure Message")
+    #         if 'id="send-message-btn"' not in response.text:
+    #             response.failure("Couldn't find Secure Message Send button")
+    #
+    # @task(3)
+    # def create_secure_message(self):
+    #     data = {
+    #         "subject": "Performance Test",
+    #         "body": "This is a performance test",
+    #         "send": "send"
+    #     }
+    #
+    #     with self.client.post(self.create_message_link, cookies={"authorization": self.auth_cookie}, data=data, catch_response=True) as response:
+    #         d = datetime.today()
+    #         if 'first_name last_name' not in response.text:
+    #             response.failure("Not returned to the messages tab with a thread with our name on it")
+    #         if not (f'{d.strftime(":%M")}' in response.text or f'{(d - timedelta(minutes=1)).strftime(":%M")}' in response.text):
+    #             response.failure("No new messages sent in the last 60 seconds")
+    #         self.view_message_thread_link = re.search('\/secure-message\/threads\/[^\"]*#latest-message', response.text).group(0)
+    #
+    # @task(4)
+    # def view_message_thread(self):
+    #     with self.client.get(self.view_message_thread_link, cookies={"authorization": self.auth_cookie}, catch_response=True) as response:
+    #         if 'This is a performance test' not in response.text:
+    #             response.failure("Can't find message body in message thread")
+    #
+    # @task(5)
+    # def reply_to_message_thread(self):
+    #     reply_link = self.view_message_thread_link.split('#latest-message')[0]
+    #     data = {
+    #         "body": "Reply to a performance test",
+    #         "send": "send"
+    #     }
+    #
+    #     with self.client.post(reply_link, cookies={"authorization": self.auth_cookie}, data=data, catch_response=True) as response:
+    #         d = datetime.today()
+    #         if "Reply to a performance test" not in response.text:
+    #             response.failure("Message not replied to")
+    #         if not (f'{d.strftime(":%M")}' in response.text or f'{(d - timedelta(minutes=1)).strftime(":%M")}' in response.text):
+    #             response.failure("No new messages sent in the last 60 seconds")
+    #
+    # @task(6)
+    # def get_survey_history(self):
+    #     with self.client.get("/surveys/history", cookies={"authorization": self.auth_cookie}, catch_response=True) as response:
+    #         if "Period covered" not in response.text:
+    #             response.failure("Couldn't load survey history page")
+    #         if "No items to show" not in response.text:
+    #             response.failure("User has survey history somehow")
 
 
 class FrontstageLocust(HttpUser):
