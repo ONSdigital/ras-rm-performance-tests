@@ -18,18 +18,18 @@ locust:
       security_user_name: admin
       security_user_password: secret
       test_respondent_password: password
-      test_respondents: 5
+      test_respondents: 1
       GOOGLE_CLOUD_PROJECT: "ras-rm-performance-20220908"
       GCS_BUCKET_NAME: "ras-rm-performance-20220908-results"
 
   master:
+    replicas: 1
     environment:
       LOCUST_USERS: 1
       LOCUST_SPAWN_RATE: 1
       LOCUST_RUN_TIME: 1m
       LOCUST_ONLY_SUMMARY: true
       LOCUST_CSV: rasrm
-
 
   worker:
     replicas: 1
