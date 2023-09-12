@@ -216,11 +216,13 @@ def load_and_link_collection_instrument(auth, survey_id):
         for ci in json.loads(get_response.text):
             logger.info('Linking collection instrument %s to exercise %s', ci['id'], period)
             link_url = f"{os.getenv('collection_instrument')}/collection-instrument-api/1.0.2/link-exercise/{ci['id']}/{collection_exercise_id}"
-            # The following request successfully creates the ce link in the ci db but a
-            # subsequent API call to the ce service eventually fails 'Populating data for requested collection exercise' as
-            # Cannot construct instance of `uk.gov.ons.ctp.response.collection.exercise.message.dto.CollectionInstrumentMessageDTO`, problem: Cannot invoke "String.length()" because "name" is null
+
+            # In the performance env the following POST request successfully creates the ce link in the ci db
+            # However, a subsequent API call to from ci to the ce service then fails 'Populating data for requested collection exercise'
+            # This causes a 400 BAD REQUEST to be returned to the ci and then to this Locust script
+            # This doesn't happen when running the Locust script locally against a dev env
             link_response = requests.post(url=link_url, auth=auth)
-            #link_response.raise_for_status()
+            link_response.raise_for_status()
 
         logger.info('Successfully linked collection instruments to exercise %s', period)
     else:
