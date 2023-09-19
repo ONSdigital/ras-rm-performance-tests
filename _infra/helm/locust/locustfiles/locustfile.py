@@ -1,20 +1,18 @@
+import csv
 import datetime
-import os
 import io
 import json
-import requests
-import time
 import logging
-import csv
+import os
 import random
-import re
 import socket
-
-from datetime import timezone, datetime, timedelta
-from locust import HttpUser, SequentialTaskSet, task, events, between
-from google.cloud import storage
+import time
+from datetime import timezone, datetime
 from functools import partial
 
+import requests
+from google.cloud import storage
+from locust import HttpUser, SequentialTaskSet, task, events, between
 from locust.runners import MasterRunner, LocalRunner
 
 survey_short_name = 'QBS'
@@ -63,9 +61,9 @@ def load_survey(auth):
 
     create_url = f"{os.getenv('survey')}/surveys"
     survey_details = {"surveyRef": survey_ref, "longName": survey_long_name, "shortName": survey_short_name,
-        "legalBasisRef": 'STA1947', "surveyType": 'Business',
-        "classifiers": [{"name": "COLLECTION_INSTRUMENT", "classifierTypes": ["FORM_TYPE"]},
-            {"name": "COMMUNICATION_TEMPLATE", "classifierTypes": ["LEGAL_BASIS", "REGION"]}]}
+                      "legalBasisRef": 'STA1947', "surveyType": 'Business',
+                      "classifiers": [{"name": "COLLECTION_INSTRUMENT", "classifierTypes": ["FORM_TYPE"]},
+                                      {"name": "COMMUNICATION_TEMPLATE", "classifierTypes": ["LEGAL_BASIS", "REGION"]}]}
 
     create_response = requests.post(create_url, json=survey_details, auth=auth)
     try:
@@ -216,11 +214,6 @@ def load_and_link_collection_instrument(auth, survey_id):
         for ci in json.loads(get_response.text):
             logger.info('Linking collection instrument %s to exercise %s', ci['id'], period)
             link_url = f"{os.getenv('collection_instrument')}/collection-instrument-api/1.0.2/link-exercise/{ci['id']}/{collection_exercise_id}"
-
-            # In the performance env the following POST request successfully creates the ce link in the ci db
-            # However, a subsequent API call to from ci to the ce service then fails 'Populating data for requested collection exercise'
-            # This causes a 400 BAD REQUEST to be returned to the ci and then to this Locust script
-            # This doesn't happen when running the Locust script locally against a dev env
             link_response = requests.post(url=link_url, auth=auth)
             link_response.raise_for_status()
 
@@ -291,10 +284,9 @@ def generate_sample_string(size):
         runame3 = str(i)
         tradas3 = str(i)
         region_code = 'WW'
-        row = (
-        sample_unit_ref, 'H', '75110', '75110', '84110', '84110', '3603', '97281', '9905249178', '5', 'E', region_code,
-        '07/08/2003', 'OFFICE FOR', 'NATIONAL STATISTICS', runame3, 'OFFICE FOR', 'NATIONAL STATISTICS', tradas3, '',
-        '', '', 'C', '', '1', form_type, 'S')
+        row = (sample_unit_ref, 'H', '75110', '75110', '84110', '84110', '3603', '97281', '9905249178', '5', 'E',
+               region_code, '07/08/2003', 'OFFICE FOR', 'NATIONAL STATISTICS', runame3, 'OFFICE FOR',
+               'NATIONAL STATISTICS', tradas3, '', '', '', 'C', '', '1', form_type, 'S')
         writer.writerow(row)
 
     return output.getvalue()
@@ -306,33 +298,46 @@ def execute_collection_exercise(auth, survey_id):
     attempt = 1
     ready = False
     while attempt <= 20 and not ready:
+        get_collection_exercise_state(auth)
         logger.info('Polling to see if collection exercise %s is ready to execute (attempt %s)', period, attempt)
         data = get_collection_exercise(survey_ref, period, poll_url, auth)
         if data:
             ready = data['state'] == 'READY_FOR_REVIEW'
         if not ready:
             if data:
-                logger.info('Not ready, current state is %s, waiting 3s', data['state'])
+                logger.info('Collection exercise not yet READY_FOR_REVIEW, current state is %s', data['state'])
             else:
-                logger.info('Not ready waiting 3s')
+                logger.info('Collection exercise not yet available')
             attempt += 1
-            time.sleep(3)
+            time.sleep(1)
 
     if not ready:
         logger.error('Collection exercise %s on survey %s never went READY_FOR_REVIEW', period, survey_ref)
         raise Exception('Failed to execute collection exercise')
 
-    logger.info('Executing collection exercise %s on survey %s ', period, survey_ref)
-    execute_url = f"{os.getenv('collection_exercise')}/collectionexerciseexecution/{data['id']}"
-    response = requests.post(execute_url, auth=auth)
-    response.raise_for_status()
-    logger.info('Collection exerise %s on survey %s executed', period, survey_ref)
-    time.sleep(10)
+    while get_collection_exercise_state(auth) == 'READY_FOR_REVIEW':
+        logger.info('Executing collection exercise %s on survey %s ', period, survey_ref)
+        execute_url = f"{os.getenv('collection_exercise')}/collectionexerciseexecution/{data['id']}"
+        response = requests.post(execute_url, auth=auth)
+        response.raise_for_status()
+        logger.info('Collection exercise %s on survey %s executed', period, survey_ref)
+        logger.info('Waiting for READY_FOR_LIVE...')
+        time.sleep(1)
 
-    process_scheduled_events_url = f"{os.getenv('collection_exercise')}/cron/process-scheduled-events"
-    response = requests.get(process_scheduled_events_url, auth=auth)
-    response.raise_for_status()
-    time.sleep(10)
+    while get_collection_exercise_state(auth) != 'LIVE':
+        logger.info('Executing process-scheduled-events...')
+        process_scheduled_events_url = f"{os.getenv('collection_exercise')}/cron/process-scheduled-events"
+        response = requests.get(process_scheduled_events_url, auth=auth)
+        response.raise_for_status()
+        logger.info('Waiting for LIVE...')
+        time.sleep(1)
+
+
+def get_collection_exercise_state(auth):
+    collection_exercise_url = f"{os.getenv('collection_exercise')}/collectionexercises"
+    data = get_collection_exercise(survey_ref, period, collection_exercise_url, auth)
+    logger.info('Collection Exercise State: %s', data['state'])
+    return data['state']
 
 
 # Register respondent accounts
@@ -375,12 +380,14 @@ def register_users(auth):
 
         register_url = f"{os.getenv('party')}/party-api/v1/respondents"
         data = {'emailAddress': email_address, 'firstName': 'first_name', 'lastName': 'last_name',
-            'password': os.getenv('test_respondent_password'), 'telephone': '09876543210', 'enrolmentCode': iac}
+                'password': os.getenv('test_respondent_password'), 'telephone': '09876543210', 'enrolmentCode': iac}
         register_response = requests.post(register_url, json=data, auth=auth)
         if register_response.status_code != 200:
             logger.error("Couldn't register user %s because %s > %s", email_address, register_response.status_code,
                          register_response.text)
             raise Exception("Failed to register user")
+
+        # TODO: Introduce a frontstage email verification link step rather than direct activation
 
         respondent_id = json.loads(register_response.text)['id']
         activate_payload = {"status_change": "ACTIVE"}
@@ -459,9 +466,7 @@ class FrontstageTasks(SequentialTaskSet):
                 response.failure("Not logged in")
             if 'To do' not in response.text:
                 response.failure(
-                    "To do tab not displayed after login")  #     response.failure("Not logged in")  # if 'You have no surveys to complete' in response.text:  #     response.failure("No surveys in survey list")  # if 'Quarterly Business Survey' not in response.text:  #     response.failure("QBS survey not found in list")
-
-            # self.create_message_link = re.search('\/secure-message\/create-message\/[^\"]*', response.text).group(0)  # GET http://localhost:8082/surveys/surveys-help?survey_ref=139&ru_ref=49900000000  # POST http://localhost:8082/surveys/help?short_name=QBS&amp;business_id=43e4b914-1db8-4267-ab7c-b223e7190d65&amp;survey_ref=139&amp;ru_ref=49900000000  #         name="csrf_token" value="ImM5ZDE4MzNiNTVhMDAwZDFmYWU5MWRlOGJkNWVhNzhmMzBiZjdhZDci.ZPz3rg.MsZXp47XLJlAN1n0DCjdQq9LVcw"  #         name="option" value="something-else"  # @task(2)  # def create_secure_message_page(self):  #     with self.client.get(self.create_message_link, cookies={"authorization": self.auth_cookie}, catch_response=True) as response:  #         if 'To: ONS Business Surveys team' not in response.text:  #             response.failure("Couldn't find To: when sending Secure Message")  #         if 'id="send-message-btn"' not in response.text:  #             response.failure("Couldn't find Secure Message Send button")  #  # @task(3)  # def create_secure_message(self):  #     data = {  #         "subject": "Performance Test",  #         "body": "This is a performance test",  #         "send": "send"  #     }  #  #     with self.client.post(self.create_message_link, cookies={"authorization": self.auth_cookie}, data=data, catch_response=True) as response:  #         d = datetime.today()  #         if 'first_name last_name' not in response.text:  #             response.failure("Not returned to the messages tab with a thread with our name on it")  #         if not (f'{d.strftime(":%M")}' in response.text or f'{(d - timedelta(minutes=1)).strftime(":%M")}' in response.text):  #             response.failure("No new messages sent in the last 60 seconds")  #         self.view_message_thread_link = re.search('\/secure-message\/threads\/[^\"]*#latest-message', response.text).group(0)  #  # @task(4)  # def view_message_thread(self):  #     with self.client.get(self.view_message_thread_link, cookies={"authorization": self.auth_cookie}, catch_response=True) as response:  #         if 'This is a performance test' not in response.text:  #             response.failure("Can't find message body in message thread")  #  # @task(5)  # def reply_to_message_thread(self):  #     reply_link = self.view_message_thread_link.split('#latest-message')[0]  #     data = {  #         "body": "Reply to a performance test",  #         "send": "send"  #     }  #  #     with self.client.post(reply_link, cookies={"authorization": self.auth_cookie}, data=data, catch_response=True) as response:  #         d = datetime.today()  #         if "Reply to a performance test" not in response.text:  #             response.failure("Message not replied to")  #         if not (f'{d.strftime(":%M")}' in response.text or f'{(d - timedelta(minutes=1)).strftime(":%M")}' in response.text):  #             response.failure("No new messages sent in the last 60 seconds")  #  # @task(6)  # def get_survey_history(self):  #     with self.client.get("/surveys/history", cookies={"authorization": self.auth_cookie}, catch_response=True) as response:  #         if "Period covered" not in response.text:  #             response.failure("Couldn't load survey history page")  #         if "No items to show" not in response.text:  #             response.failure("User has survey history somehow")
+                    "To do tab not displayed after login")
 
 
 class FrontstageLocust(HttpUser):
