@@ -20,7 +20,7 @@ locust:
       test_respondent_password: password
       test_respondents: 10
       GOOGLE_CLOUD_PROJECT: "ras-rm-performance-20220908"
-      GCS_BUCKET_NAME: "ras-rm-performance-20220908-results"
+      GCS_BUCKET_NAME: "ras-rm-performance-20220908-locust"
 
   master:
     replicas: 1
