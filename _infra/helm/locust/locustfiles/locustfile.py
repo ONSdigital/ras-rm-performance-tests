@@ -483,6 +483,6 @@ class GoogleCloudStorage:
         self.bucket = self.client.bucket(self.bucket_name)
 
     def upload(self, file_name, file):
-        path = datetime.utcnow().strftime("%d-%m-%y-%H-%M") + "/" + file_name
+        path = datetime.utcnow().strftime("%y-%m-%d-%H-%M") + "/" + file_name
         blob = self.bucket.blob(path)
         blob.upload_from_string(data=file, content_type='application/csv')
