@@ -111,16 +111,6 @@ jobs:
           mv $IMAGE-${{ env.HELM_VERSION }}.tgz $IMAGE-latest.tgz
           gsutil cp $IMAGE-*.tgz gs://$ARTIFACT_BUCKET/$IMAGE/
 
-      - name: Build Release Image
-        if: github.ref == 'refs/heads/main'
-        run: |
-          docker build -t "$REGISTRY_HOSTNAME"/"$RELEASE_HOST"/"$IMAGE":latest -t "$REGISTRY_HOSTNAME"/"$RELEASE_HOST"/"$IMAGE":${{ steps.release.outputs.version }} .
-      - name: Push Release image
-        if: github.ref == 'refs/heads/main'
-        run: |
-          docker push "$REGISTRY_HOSTNAME"/"$RELEASE_HOST"/"$IMAGE":${{ steps.release.outputs.version }}
-          docker push "$REGISTRY_HOSTNAME"/"$RELEASE_HOST"/"$IMAGE":latest
-
       - name: Publish Charts
         if: github.ref == 'refs/heads/main'
         run: |
@@ -138,10 +128,3 @@ jobs:
             ${{ steps.release.outputs.version }}
           draft: false
           prerelease: false
-
-      - name: CD hook
-        if: github.ref == 'refs/heads/main'
-        run: |
-          gcloud pubsub topics publish $SPINNAKER_TOPIC --project $HOST \
-          --message "{ \"kind\": \"storage#object\", \"name\": \"$IMAGE/$IMAGE-${{ env.HELM_VERSION }}.tgz\", \"bucket\": \"$ARTIFACT_BUCKET\" }" \
-          --attribute cd="actions"
