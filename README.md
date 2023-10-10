@@ -1,55 +1,15 @@
 # ras-rm-performance-tests
-Performance Test Scripts
+
+This repo contains the RASRM performance test load injection application using the Locust framework 
 
 ## Running load tests from Spinnaker
-### TODO pipeline doesn't work at present
-* Check to see if the cluster you're targeting has a locust namespace already. If it does, you won't need to redeploy it unless you've changed the test scripts
-* Run the pipeline in the Locust application (if its missing for some reason, save it from the config in this repository). Target the namespace you've deployed frontstage to
-* Port-forward to the Locust Master
-```bash
-kubectl port-forward locust-master-xxxxxxx -n locust 8089
-```
-* Navigate to [Locust](http://localhost:8089) and check the target host is the one you wanted - it should be for sandbox/dev environments
-* Spin up a performance test
 
-## Running load tests by running Helm yourself
+The `Locust` application is deployed by Spinnaker in the `performance environment setup` pipeline. This runs the performance tests against the performance environment.
 
-**Ensure that you're pointed towards the performance environment before running these tests!**
+The Locust test script is `_infra/helm/locust/locustfiles/locustfile.py`
 
-If one does not exists then create a kubernetes namespace 
-```bash
-kubectl create namespace locust
-```
+## Application and load configuration
 
-Install the helm charts for Locust
-```bash
-helm install locust _infra/helm/locust --namespace locust
-```
+The configuration to increase users, master and workers is in `values.yaml`
 
-Port-forward to the Locust Master
-```bash
-kubectl port-forward locust-master-xxxxxxx 8089
-```
-
-Naviagte to [Locust](http://localhost:8089) and spin up a performance test
-
-### Removing Locust
-
-Stop the performance test
-
-Uninstall the helm chart
-```bash
-helm uninstall locust
-```
-
-## Where are the tests?
-
-In `_infra\helm\locust\tasks`
-
-## I need more workers!
-
-In `values.yaml`, change `workers.replicaCount`
-
-## Re-run
-
-To re-run the tests clean out the database using the commands from cleanup.sql
+A script to clean out the database prior to a re-run can be found in `cleanup.sql`

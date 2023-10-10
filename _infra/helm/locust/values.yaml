@@ -2,7 +2,7 @@ locust:
   loadtest:
     name: performance-test
     headless: true
-    locust_locustfile: main.py
+    locust_locustfile: locustfile.py
     locust_locustfile_configmap: locust-worker
     locust_host: http://frontstage.performance.svc.cluster.local:9000
     pip_packages:
@@ -18,24 +18,24 @@ locust:
       security_user_name: admin
       security_user_password: secret
       test_respondent_password: password
-      test_respondents: 5
-      GOOGLE_CLOUD_PROJECT: "ras-rm-performance-tests"
-      GCS_BUCKET_NAME: "ras-rm-performance-results"
+      test_respondents: 10
+      GOOGLE_CLOUD_PROJECT: "ras-rm-performance-20220908"
+      GCS_BUCKET_NAME: "ras-rm-performance-20220908-locust"
 
   master:
+    replicas: 1
     environment:
-      LOCUST_USERS: 1000
-      LOCUST_SPAWN_RATE: 100
-      LOCUST_RUN_TIME: 5m
+      LOCUST_USERS: 10
+      LOCUST_SPAWN_RATE: 1
+      LOCUST_RUN_TIME: 35m
       LOCUST_ONLY_SUMMARY: true
       LOCUST_CSV: rasrm
 
-
   worker:
-    replicas: 5
+    replicas: 1
     strategy:
       type: RollingUpdate
 
   image:
     repository: locustio/locust
-    tag: 1.4.1
+    tag: 2.15.1
