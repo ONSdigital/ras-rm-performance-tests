@@ -1,5 +1,6 @@
 locust:
   loadtest:
+    csrf_enabled: True
     name: performance-test
     headless: true
     locust_locustfile: locustfile.py

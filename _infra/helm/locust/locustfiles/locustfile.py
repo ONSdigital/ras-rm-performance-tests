@@ -4,7 +4,6 @@ import io
 import json
 import logging
 import os
-import random
 import socket
 import time
 from datetime import timezone, datetime
@@ -14,6 +13,7 @@ import requests
 from google.cloud import storage
 from locust import HttpUser, SequentialTaskSet, task, events, between
 from locust.runners import MasterRunner, LocalRunner
+from _infra.helm.locust.locustfiles.frontstage_tasks import FrontstageTasks
 
 survey_short_name = 'QBS'
 survey_long_name = 'Quarterly Business Survey'
@@ -439,34 +439,6 @@ def on_test_stop(environment, **kwargs):
             gcs.upload(file_name=stats, file=s.read())
         with open(history) as h:
             gcs.upload(file_name=history, file=h.read())
-
-
-class FrontstageTasks(SequentialTaskSet):
-    create_message_link = None
-    view_message_thread_link = None
-
-    def on_start(self):
-        self.login()
-
-    def login(self):
-        sample_unit_ref = '499' + format(str(random.randint(0, respondents)), "0>8s")
-        data = {'username': sample_unit_ref + "@test.com", 'password': os.getenv('test_respondent_password')}
-        response = self.client.post("/sign-in/?next=", data=data, catch_response=True, allow_redirects=False)
-        if response.status_code != 302:
-            self.interrupt()
-        logger.info("status_code: %s", response.status_code)
-        self.auth_cookie = response.cookies['authorization']
-        logger.info("auth_cookie: %s", self.auth_cookie)
-
-    @task(1)
-    def surveys_todo(self):
-        with self.client.get("/surveys/todo", cookies={"authorization": self.auth_cookie},
-                             catch_response=True) as response:
-            if 'Sign in' in response.text:
-                response.failure("Not logged in")
-            if 'To do' not in response.text:
-                response.failure(
-                    "To do tab not displayed after login")
 
 
 class FrontstageLocust(HttpUser):
