@@ -465,6 +465,7 @@ class Mixins:
 
     def post(self, url: str, data: dict = {}):
         data['csrf_token'] = self.csrf_token
+        logger.info(f"sending to {url}, with data {data}")
         with self.client.post(url=url, data=data, allow_redirects=False, catch_response=True) as response:
 
             if response.status_code != 302:
