@@ -1,6 +1,5 @@
 locust:
   loadtest:
-    csrf_enabled: true
     name: performance-test
     headless: true
     locust_locustfile: locustfile.py
@@ -22,6 +21,7 @@ locust:
       test_respondents: 10
       GOOGLE_CLOUD_PROJECT: "ras-rm-performance-20220908"
       GCS_BUCKET_NAME: "ras-rm-performance-20220908-locust"
+      csrf_enabled: true
 
   master:
     replicas: 1
