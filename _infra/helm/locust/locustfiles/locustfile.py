@@ -484,7 +484,7 @@ class FrontstageTasks(TaskSet, Mixins):
     def sign_in(self):
         response = self.get(url="/sign-in", expected_response_text="Sign in")
 
-        if os.getenv("csrf_enabled"):
+        if os.getenv("CSRF_ENABLED"):
             self.csrf_token = _capture_csrf_token(response.content.decode('utf8'))
 
         response = self.post("/sign-in", data=_generate_random_respondent())
