@@ -518,6 +518,5 @@ def _capture_csrf_token(html):
 
 
 def _generate_random_respondent():
-    respondents_count = int(os.getenv('test_respondents'))
-    respondent_email = f"499{random.randint(0, respondents_count):08}@test.com"
-    return {"username": respondent_email, "password": os.getenv('test_respondent_password')}
+    respondent_email = f"499{random.randint(0, respondents):08}@test.com"
+    return {"username": respondent_email, "password": os.getenv("test_respondent_password")}
