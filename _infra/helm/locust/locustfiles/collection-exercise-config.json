@@ -1,5 +1,5 @@
 {
-    "inputFiles": ["/mnt/locust/ce_details.csv"],
+    "inputFiles": [".//ce_details.csv"],
     "columnMappings": {
         "Survey_Id": "surveyRef",
         "Survey_Name": "name",

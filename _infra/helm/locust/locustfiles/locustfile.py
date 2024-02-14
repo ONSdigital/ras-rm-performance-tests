@@ -124,7 +124,7 @@ def reformat_date(date):
 
 # Collection exercise loading
 def load_collection_exercises(auth):
-    config = json.load(open("/mnt/locust/collection-exercise-config.json"))
+    config = json.load(open(".//collection-exercise-config.json"))
     input_files = config['inputFiles']
     column_mappings = config['columnMappings']
     url = f"{os.getenv('collection_exercise')}/collectionexercises"
@@ -146,7 +146,7 @@ def post_collection_exercise(data, url, auth):
 
 # Collection exercise event loading
 def load_collection_exercise_events(auth):
-    config = json.load(open("/mnt/locust/collection-exercise-event-config.json"))
+    config = json.load(open(".//collection-exercise-event-config.json"))
     input_files = config['inputFiles']
     column_mappings = config['columnMappings']
     url = f"{os.getenv('collection_exercise')}/collectionexercises"
