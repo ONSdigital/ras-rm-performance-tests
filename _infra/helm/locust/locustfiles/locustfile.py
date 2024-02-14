@@ -5,15 +5,18 @@ import json
 import logging
 import os
 import random
+import re
+import requests
 import socket
 import time
 from datetime import timezone, datetime
 from functools import partial
 
-import requests
+
 from google.cloud import storage
-from locust import HttpUser, SequentialTaskSet, task, events, between
+from locust import HttpUser, TaskSet, task, events, between
 from locust.runners import MasterRunner, LocalRunner
+
 
 survey_short_name = 'QBS'
 survey_long_name = 'Quarterly Business Survey'
@@ -27,7 +30,7 @@ logger = logging.getLogger()
 # Ignore these during collection exercise event processing as they are the key
 # for the collection exercise and don't represent event data
 ignore_columns = ['surveyRef', 'exerciseRef']
-
+CSRF_REGEX = re.compile(r'<input id="csrf_token" name="csrf_token" type="hidden" value="(.+?)"\/?>')
 
 # Load data for tests
 def load_data():
@@ -441,32 +444,52 @@ def on_test_stop(environment, **kwargs):
             gcs.upload(file_name=history, file=h.read())
 
 
-class FrontstageTasks(SequentialTaskSet):
-    create_message_link = None
-    view_message_thread_link = None
+class Mixins:
+    csrf_token = None
+    auth_cookie = None
+
+    def get(self, url: str, expected_response_text=None):
+        with self.client.get(url=url, allow_redirects=False, catch_response=True) as response:
+
+            if response.status_code != 200:
+                error = f"Expected a 200 but got a {response.status_code} for url {url}"
+                response.failure(error)
+                self.interrupt()
+
+            if expected_response_text and expected_response_text not in response.text:
+                error = f"response text ({expected_response_text}) isn't in returned html"
+                response.failure(error)
+                self.interrupt()
+
+            return response
+
+    def post(self, url: str, data: dict = {}):
+        data['csrf_token'] = self.csrf_token
+        with self.client.post(url=url, data=data, allow_redirects=False, catch_response=True) as response:
+
+            if response.status_code != 302:
+                error = f"Expected a 302 but got a ({response.status_code}) for url {url} and data {data}"
+                response.failure(error)
+                self.interrupt()
+
+            return response
+
+
+class FrontstageTasks(TaskSet, Mixins):
 
     def on_start(self):
-        self.login()
+        self.sign_in()
 
-    def login(self):
-        sample_unit_ref = '499' + format(str(random.randint(0, respondents)), "0>8s")
-        data = {'username': sample_unit_ref + "@test.com", 'password': os.getenv('test_respondent_password')}
-        response = self.client.post("/sign-in/?next=", data=data, catch_response=True, allow_redirects=False)
-        if response.status_code != 302:
-            self.interrupt()
-        logger.info("status_code: %s", response.status_code)
+    def sign_in(self):
+        response = self.get(url="/sign-in", expected_response_text="Sign in")
+        self.csrf_token = _capture_csrf_token(response.content.decode('utf8'))
+
+        response = self.post("/sign-in", data=_generate_random_respondent())
         self.auth_cookie = response.cookies['authorization']
-        logger.info("auth_cookie: %s", self.auth_cookie)
 
-    @task(1)
-    def surveys_todo(self):
-        with self.client.get("/surveys/todo", cookies={"authorization": self.auth_cookie},
-                             catch_response=True) as response:
-            if 'Sign in' in response.text:
-                response.failure("Not logged in")
-            if 'To do' not in response.text:
-                response.failure(
-                    "To do tab not displayed after login")
+    @task
+    def todo(self):
+        self.get("/surveys/todo", expected_response_text="Click on the survey name to complete your questionnaire")
 
 
 class FrontstageLocust(HttpUser):
@@ -486,3 +509,14 @@ class GoogleCloudStorage:
         path = datetime.utcnow().strftime("%y-%m-%d-%H-%M") + "/" + file_name
         blob = self.bucket.blob(path)
         blob.upload_from_string(data=file, content_type='application/csv')
+
+
+def _capture_csrf_token(html):
+    match = CSRF_REGEX.search(html)
+    if match:
+        return match.group(1)
+
+
+def _generate_random_respondent():
+    respondent_email = f"499{random.randint(0, respondents):08}@test.com"
+    return {"username": respondent_email, "password": os.getenv("test_respondent_password")}

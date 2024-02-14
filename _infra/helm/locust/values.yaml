@@ -21,6 +21,7 @@ locust:
       test_respondents: 10
       GOOGLE_CLOUD_PROJECT: "ras-rm-performance-20220908"
       GCS_BUCKET_NAME: "ras-rm-performance-20220908-locust"
+      CSRF_ENABLED: true
 
   master:
     replicas: 1
