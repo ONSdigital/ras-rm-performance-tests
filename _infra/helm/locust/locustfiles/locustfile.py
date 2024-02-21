@@ -478,19 +478,31 @@ class Mixins:
 class FrontstageTasks(TaskSet, Mixins):
 
     def on_start(self):
-        self.sign_in()
+        requests_filepath = "requests.json"
 
-    def sign_in(self):
-        response = self.get(url="/sign-in", expected_response_text="Sign in")
-        self.csrf_token = _capture_csrf_token(response.content.decode('utf8'))
-
-        response = self.post("/sign-in", data=_generate_random_respondent())
-        self.auth_cookie = response.cookies['authorization']
+        with open(requests_filepath, encoding='utf-8') as requests_file:
+            requests_json = json.load(requests_file)
+            self.requests = requests_json["requests"]
 
     @task
-    def todo(self):
-        self.get("/surveys/todo", expected_response_text="Click on the survey name to complete your questionnaire")
+    def perform_requests(self):
+        for request in self.requests:
+            request_url = request['url']
 
+            if request["method"] == "GET":
+                request_response = request['expected_response_text']
+                response = self.get(request_url, request_response)
+                self.csrf_token = _capture_csrf_token(response.content.decode('utf8'))
+
+            elif request["method"] == "POST":
+                response_data = request['data']
+                response = self.post(request_url, response_data)
+                self.auth_cookie = response.cookies['authorization']
+
+            else:
+                raise Exception(
+                    f"Invalid request method {request['method']} for request to: {request_url}"
+                )
 
 class FrontstageLocust(HttpUser):
     tasks = {FrontstageTasks}
@@ -515,8 +527,3 @@ def _capture_csrf_token(html):
     match = CSRF_REGEX.search(html)
     if match:
         return match.group(1)
-
-
-def _generate_random_respondent():
-    respondent_email = f"499{random.randint(0, respondents):08}@test.com"
-    return {"username": respondent_email, "password": os.getenv("test_respondent_password")}
