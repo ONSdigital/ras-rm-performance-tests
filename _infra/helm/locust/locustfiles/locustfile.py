@@ -124,7 +124,7 @@ def reformat_date(date):
 
 # Collection exercise loading
 def load_collection_exercises(auth):
-    config = json.load(open("/mnt/locust/collection-exercise-config.json"))
+    config = json.load(open(".//collection-exercise-config.json"))
     input_files = config['inputFiles']
     column_mappings = config['columnMappings']
     url = f"{os.getenv('collection_exercise')}/collectionexercises"
@@ -146,7 +146,7 @@ def post_collection_exercise(data, url, auth):
 
 # Collection exercise event loading
 def load_collection_exercise_events(auth):
-    config = json.load(open("/mnt/locust/collection-exercise-event-config.json"))
+    config = json.load(open(".//collection-exercise-event-config.json"))
     input_files = config['inputFiles']
     column_mappings = config['columnMappings']
     url = f"{os.getenv('collection_exercise')}/collectionexercises"
@@ -461,6 +461,11 @@ class Mixins:
                 response.failure(error)
                 self.interrupt()
 
+            if url and url not in response.text:
+                error = f"url ({url}) isn't in returned html"
+                response.failure(error)
+                self.interrupt()
+
             return response
 
     def post(self, url: str, data: dict = {}):
@@ -476,13 +481,23 @@ class Mixins:
 
 
 class FrontstageTasks(TaskSet, Mixins):
-
-    def on_start(self):
-        requests_filepath = "requests.json"
+    def __init__(self, parent):
+        super().__init__(parent)
+        requests_filepath = os.getenv('json_requests_filepath', 'requests.json')
 
         with open(requests_filepath, encoding='utf-8') as requests_file:
             requests_json = json.load(requests_file)
             self.requests = requests_json["requests"]
+
+    def on_start(self):
+        self.sign_in()
+
+    def sign_in(self):
+        response = self.get(url="/sign-in", expected_response_text="Sign in")
+        self.csrf_token = _capture_csrf_token(response.content.decode('utf8'))
+
+        response = self.post("/sign-in", data=_generate_random_respondent())
+        self.auth_cookie = response.cookies['authorization']
 
     @task
     def perform_requests(self):
@@ -490,14 +505,12 @@ class FrontstageTasks(TaskSet, Mixins):
             request_url = request['url']
 
             if request["method"] == "GET":
-                request_response = request['expected_response_text']
-                response = self.get(request_url, request_response)
-                self.csrf_token = _capture_csrf_token(response.content.decode('utf8'))
+                expected_response_text = request['expected_response_text']
+                self.get(request_url, expected_response_text)
 
             elif request["method"] == "POST":
                 response_data = request['data']
-                response = self.post(request_url, response_data)
-                self.auth_cookie = response.cookies['authorization']
+                self.post(request_url, response_data)
 
             else:
                 raise Exception(
@@ -527,3 +540,8 @@ def _capture_csrf_token(html):
     match = CSRF_REGEX.search(html)
     if match:
         return match.group(1)
+
+
+def _generate_random_respondent():
+    respondent_email = f"499{random.randint(0, respondents):08}@test.com"
+    return {"username": respondent_email, "password": os.getenv("test_respondent_password")}
