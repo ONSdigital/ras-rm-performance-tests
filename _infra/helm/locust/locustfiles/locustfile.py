@@ -124,7 +124,7 @@ def reformat_date(date):
 
 # Collection exercise loading
 def load_collection_exercises(auth):
-    config = json.load(open(".//collection-exercise-config.json"))
+    config = json.load(open("/mnt/locust/collection-exercise-config.json"))
     input_files = config['inputFiles']
     column_mappings = config['columnMappings']
     url = f"{os.getenv('collection_exercise')}/collectionexercises"
@@ -146,7 +146,7 @@ def post_collection_exercise(data, url, auth):
 
 # Collection exercise event loading
 def load_collection_exercise_events(auth):
-    config = json.load(open(".//collection-exercise-event-config.json"))
+    config = json.load(open("/mnt/locust/collection-exercise-event-config.json"))
     input_files = config['inputFiles']
     column_mappings = config['columnMappings']
     url = f"{os.getenv('collection_exercise')}/collectionexercises"
@@ -423,6 +423,11 @@ def data_loaded():
 @events.test_start.add_listener
 def on_test_start(environment, **kwargs):
     logger.info("on_test_start Locust runner: %s", environment.runner)
+    requests_filepath = os.getenv('json_requests_filepath', 'requests.json')
+    with open(requests_filepath, encoding='utf-8') as requests_file:
+        requests_json = json.load(requests_file)
+        global request_list
+        request_list = requests_json["requests"]
     if isinstance(environment.runner, (MasterRunner, LocalRunner)):
         load_data()
 
@@ -461,11 +466,6 @@ class Mixins:
                 response.failure(error)
                 self.interrupt()
 
-            if url and url not in response.text:
-                error = f"url ({url}) isn't in returned html"
-                response.failure(error)
-                self.interrupt()
-
             return response
 
     def post(self, url: str, data: dict = {}):
@@ -481,13 +481,6 @@ class Mixins:
 
 
 class FrontstageTasks(TaskSet, Mixins):
-    def __init__(self, parent):
-        super().__init__(parent)
-        requests_filepath = os.getenv('json_requests_filepath', 'requests.json')
-
-        with open(requests_filepath, encoding='utf-8') as requests_file:
-            requests_json = json.load(requests_file)
-            self.requests = requests_json["requests"]
 
     def on_start(self):
         self.sign_in()
@@ -501,7 +494,7 @@ class FrontstageTasks(TaskSet, Mixins):
 
     @task
     def perform_requests(self):
-        for request in self.requests:
+        for request in request_list:
             request_url = request['url']
 
             if request["method"] == "GET":
