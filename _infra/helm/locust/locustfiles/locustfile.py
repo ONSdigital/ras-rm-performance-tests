@@ -12,7 +12,7 @@ import time
 from datetime import timezone, datetime
 from functools import partial
 
-
+from werkzeug import exceptions
 from google.cloud import storage
 from locust import HttpUser, TaskSet, task, events, between
 from locust.runners import MasterRunner, LocalRunner
@@ -26,6 +26,11 @@ eq_id = '2'
 period = '1806'
 respondents = int(os.getenv('test_respondents'))
 logger = logging.getLogger()
+
+requests_filepath = os.getenv('json_requests_filepath', 'requests.json')
+with open(requests_filepath, encoding='utf-8') as requests_file:
+    requests_json = json.load(requests_file)
+    request_list = requests_json["requests"]
 
 # Ignore these during collection exercise event processing as they are the key
 # for the collection exercise and don't represent event data
@@ -423,11 +428,6 @@ def data_loaded():
 @events.test_start.add_listener
 def on_test_start(environment, **kwargs):
     logger.info("on_test_start Locust runner: %s", environment.runner)
-    requests_filepath = os.getenv('json_requests_filepath', 'requests.json')
-    with open(requests_filepath, encoding='utf-8') as requests_file:
-        requests_json = json.load(requests_file)
-        global request_list
-        request_list = requests_json["requests"]
     if isinstance(environment.runner, (MasterRunner, LocalRunner)):
         load_data()
 
@@ -455,7 +455,6 @@ class Mixins:
 
     def get(self, url: str, expected_response_text=None):
         with self.client.get(url=url, allow_redirects=False, catch_response=True) as response:
-
             if response.status_code != 200:
                 error = f"Expected a 200 but got a {response.status_code} for url {url}"
                 response.failure(error)
@@ -506,8 +505,9 @@ class FrontstageTasks(TaskSet, Mixins):
                 self.post(request_url, response_data)
 
             else:
-                raise Exception(
-                    f"Invalid request method {request['method']} for request to: {request_url}"
+                raise exceptions.MethodNotAllowed(
+                    valid_methods={"GET", "POST"},
+                    description=f"Invalid request method {request['method']} for request to: {request_url}"
                 )
 
 class FrontstageLocust(HttpUser):
