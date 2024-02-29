@@ -8,12 +8,12 @@
         {
             "method": "GET",
             "url": "/surveys/history",
-            "expected_response_text": "aria-selected=\"true\" id=\"SURVEY_HISTORY_TAB\" role=\"tab\">History</a>"
+            "expected_response_text": "<title>Completed surveys | ONS Business Surveys</title>"
         },
         {
             "method": "GET",
             "url": "/secure-message/threads",
-            "expected_response_text": "No new conversations"
+            "expected_response_text": "<title>Messages | ONS Business Surveys</title>"
         }
     ]
 }

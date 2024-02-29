@@ -1,0 +1,3 @@
+Method,Name,Error,Occurrences
+POST,/sign-in,"CatchResponseError(""Expected a 302 but got a (200) for url /sign-in and data {'username': '49900000001@test.com', 'password': 'password', 'csrf_token': None}"")",9
+GET,/surveys/history,"CatchResponseError(""response text (<title>Completed surveys | ONS Buess Surveys</title>) isn't in returned html"")",6
