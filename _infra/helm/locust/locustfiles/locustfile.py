@@ -28,6 +28,7 @@ respondents = int(os.getenv('test_respondents'))
 logger = logging.getLogger()
 
 requests_filepath = os.getenv('json_requests_filepath', 'requests.json')
+logger.error("Retrieving JSON requests from: %s", requests_filepath)
 with open(requests_filepath, encoding='utf-8') as requests_file:
     requests_json = json.load(requests_file)
     request_list = requests_json["requests"]
