@@ -30,7 +30,7 @@ logger = logging.getLogger()
 
 requests_filepath = os.getenv('json_requests_filepath')
 logger.info("Retrieving JSON requests from: %s", requests_filepath)
-with open(os.path.basename(requests_filepath), encoding='utf-8') as requests_file:
+with open(requests_filepath, encoding='utf-8') as requests_file:
     requests_json = json.load(requests_file)
     request_list = requests_json["requests"]
 
