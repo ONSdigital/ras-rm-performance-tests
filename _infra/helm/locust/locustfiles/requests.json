@@ -1,0 +1,19 @@
+{
+    "requests": [
+        {
+            "method": "GET",
+            "url": "/surveys/todo",
+            "expected_response_text": "Click on the survey name to complete your questionnaire"
+        },
+        {
+            "method": "GET",
+            "url": "/surveys/history",
+            "expected_response_text": "<title>Completed surveys | ONS Business Surveys</title>"
+        },
+        {
+            "method": "GET",
+            "url": "/secure-message/threads",
+            "expected_response_text": "<title>Messages | ONS Business Surveys</title>"
+        }
+    ]
+}
