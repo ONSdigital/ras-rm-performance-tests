@@ -22,7 +22,7 @@ locust:
       GOOGLE_CLOUD_PROJECT: "ras-rm-performance-20220908"
       GCS_BUCKET_NAME: "ras-rm-performance-20220908-locust"
       CSRF_ENABLED: true
-      json_requests_filepath: /mnt/locust/requests.json
+      requests_file: requests.json
 
   master:
     replicas: 1
