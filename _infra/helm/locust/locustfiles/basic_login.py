@@ -52,8 +52,6 @@ class Mixins:
     def post(self, url: str, data: dict = {}, headers: dict = {}):
         data['csrf_token'] = self.csrf_token
         headers['Referer'] = 'https://surveys-preprod.onsdigital.uk/sign-in/'
-        logger.info(data)
-        logger.info(headers)
         with self.client.post(url=url, data=data, allow_redirects=False, catch_response=True, headers=headers) as response:
             if response.status_code != 302:
                 f = open("response.html", "a")
