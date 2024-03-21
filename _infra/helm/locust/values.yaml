@@ -22,14 +22,15 @@ locust:
       CSRF_ENABLED: true
       requests_file: requests.json
       test_respondent_password: password
-      test_respondents: 15
+      test_respondents: 21
   master:
     replicas: 1
-    LOCUST_USERS: 15
-    LOCUST_SPAWN_RATE: 1
-    LOCUST_RUN_TIME: 10m
-    LOCUST_ONLY_SUMMARY: true
-    LOCUST_CSV: rasrm
+    environment:
+      LOCUST_USERS: 21
+      LOCUST_SPAWN_RATE: 1
+      LOCUST_RUN_TIME: 10m
+      LOCUST_ONLY_SUMMARY: true
+      LOCUST_CSV: rasrm
   worker:
     replicas: 1
     strategy:
