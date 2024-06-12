@@ -1,10 +1,11 @@
 {
-    "inputFiles": ["/mnt/locust/ce_details.csv"],
+    "inputFiles": [
+        "/mnt/locust/ce_details.csv"
+    ],
     "columnMappings": {
         "Survey_Id": "surveyRef",
         "Survey_Name": "name",
         "Collection_Period": "exerciseRef",
-        "Collection_Period_Label": "userDescription",
-        "Eq_Version": "eqVersion"
+        "Collection_Period_Label": "userDescription"
     }
 }
