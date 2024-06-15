@@ -28,7 +28,7 @@ respondents = int(os.getenv('test_respondents'))
 logging.basicConfig(level=logging.DEBUG, format='%(message)s')
 logger = logging.getLogger()
 
-requests_file = '/mnt/locust/' + os.getenv('requests_file')
+requests_file = './/' + os.getenv('requests_file')
 logger.info("Retrieving JSON requests from: %s", requests_file)
 with open(requests_file, encoding='utf-8') as requests_file:
     requests_json = json.load(requests_file)
