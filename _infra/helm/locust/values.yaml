@@ -7,6 +7,7 @@ locust:
     locust_host: http://frontstage.performance.svc.cluster.local:9000
     pip_packages:
       - google-cloud-storage
+      - beautifulsoup4
     environment:
       case: http://case.performance.svc.cluster.local:8080
       collection_exercise: http://collection-exercise.performance.svc.cluster.local:8080
