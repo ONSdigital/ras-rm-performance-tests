@@ -11,6 +11,7 @@ import socket
 import time
 from datetime import timezone, datetime
 from functools import partial
+from bs4 import BeautifulSoup
 
 from werkzeug import exceptions
 from google.cloud import storage
@@ -131,6 +132,7 @@ def reformat_date(date):
 
 # Collection exercise loading
 def load_collection_exercises(auth):
+
     config = json.load(open("/mnt/locust/collection-exercise-config.json"))
     input_files = config['inputFiles']
     column_mappings = config['columnMappings']
@@ -454,11 +456,13 @@ def on_test_stop(environment, **kwargs):
 class Mixins:
     csrf_token = None
     auth_cookie = None
+    response = None
 
-    def get(self, url: str, expected_response_text=None):
+    def get(self, url: str, expected_response_text=None, expected_response_status=200):
         with self.client.get(url=url, allow_redirects=False, catch_response=True) as response:
-            if response.status_code != 200:
-                error = f"Expected a 200 but got a {response.status_code} for url {url}"
+
+            if response.status_code != expected_response_status:
+                error = f"Expected a {expected_response_status} but got a {response.status_code} for url {url}"
                 response.failure(error)
                 self.interrupt()
 
@@ -466,7 +470,6 @@ class Mixins:
                 error = f"response text ({expected_response_text}) isn't in returned html"
                 response.failure(error)
                 self.interrupt()
-
             return response
 
     def post(self, url: str, data: dict = {}):
@@ -493,18 +496,35 @@ class FrontstageTasks(TaskSet, Mixins):
         response = self.post("/sign-in", data=_generate_random_respondent())
         self.auth_cookie = response.cookies['authorization']
 
+
+
     @task
     def perform_requests(self):
         for request in request_list:
-            request_url = request['url']
+
+            if self.response and "harvest_url" in request:
+                soup = BeautifulSoup(self.response.text, "html.parser")
+
+                for link in soup.find_all(id=request["harvest_url"]["id"]):
+
+                    if link.get_text() == request["harvest_url"]["link_text"]:
+                        request_url = link.get("href")
+                        break
+                    logger.error(f"Unable to harvest url {request['harvest_url']}")
+                    self.interrupt()
+            else:
+                request_url = request["url"]
 
             if request["method"] == "GET":
                 expected_response_text = request['expected_response_text']
-                self.get(request_url, expected_response_text)
+                if expected_response_status:=request.get("response_status"):
+                    self.response =self.get(request_url, expected_response_text, expected_response_status)
+                else:
+                    self.response =self.get(request_url, expected_response_text)
 
             elif request["method"] == "POST":
                 response_data = request['data']
-                self.post(request_url, response_data)
+                self.response = self.post(request_url, response_data)
 
             else:
                 raise exceptions.MethodNotAllowed(
