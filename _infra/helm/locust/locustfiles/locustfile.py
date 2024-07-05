@@ -467,7 +467,7 @@ class Mixins:
                 self.interrupt()
 
             if expected_response_text and expected_response_text not in response.text:
-                error = f"response text ({expected_response_text}) isn't in {response.text}"
+                error = f"response text ({expected_response_text}) isn't in returned html"
                 response.failure(error)
                 self.interrupt()
             return response
