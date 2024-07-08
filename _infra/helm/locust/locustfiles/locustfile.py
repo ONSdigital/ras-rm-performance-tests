@@ -132,7 +132,6 @@ def reformat_date(date):
 
 # Collection exercise loading
 def load_collection_exercises(auth):
-
     config = json.load(open("/mnt/locust/collection-exercise-config.json"))
     input_files = config['inputFiles']
     column_mappings = config['columnMappings']
@@ -496,17 +495,13 @@ class FrontstageTasks(TaskSet, Mixins):
         response = self.post("/sign-in", data=_generate_random_respondent())
         self.auth_cookie = response.cookies['authorization']
 
-
-
     @task
     def perform_requests(self):
         for request in request_list:
-
             if self.response and "harvest_url" in request:
                 soup = BeautifulSoup(self.response.text, "html.parser")
 
                 for link in soup.find_all(id=request["harvest_url"]["id"]):
-
                     if link.get_text() == request["harvest_url"]["link_text"]:
                         request_url = link.get("href")
                         break
