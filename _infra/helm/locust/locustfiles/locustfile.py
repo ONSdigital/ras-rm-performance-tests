@@ -457,8 +457,8 @@ class Mixins:
     auth_cookie = None
     response = None
 
-    def get(self, url: str, expected_response_text=None, expected_response_status=200):
-        with self.client.get(url=url, allow_redirects=False, catch_response=True) as response:
+    def get(self, url: str, grouping=None, expected_response_text=None, expected_response_status=200):
+        with self.client.get(url=url, name=grouping, allow_redirects=False, catch_response=True) as response:
 
             if response.status_code != expected_response_status:
                 error = f"Expected a {expected_response_status} but got a {response.status_code} for url {url}"
@@ -498,8 +498,10 @@ class FrontstageTasks(TaskSet, Mixins):
     @task
     def perform_requests(self):
         for request in request_list:
+            grouping = None
             if self.response and "harvest_url" in request:
                 soup = BeautifulSoup(self.response.text, "html.parser")
+                grouping = request["harvest_url"]["grouping"]
 
                 for link in soup.find_all(id=request["harvest_url"]["id"]):
                     if link.get_text() == request["harvest_url"]["link_text"]:
@@ -513,9 +515,9 @@ class FrontstageTasks(TaskSet, Mixins):
             if request["method"] == "GET":
                 expected_response_text = request['expected_response_text']
                 if expected_response_status:=request.get("response_status"):
-                    self.response =self.get(request_url, expected_response_text, expected_response_status)
+                    self.response =self.get(request_url, grouping, expected_response_text, expected_response_status)
                 else:
-                    self.response =self.get(request_url, expected_response_text)
+                    self.response =self.get(request_url, grouping, expected_response_text)
 
             elif request["method"] == "POST":
                 response_data = request['data']
