@@ -44,7 +44,7 @@ jobs:
         run: |
           git fetch --tags
           echo "tag=$(git describe --tags --abbrev=0)" >> $GITHUB_ENV
-      - name: pr docker tag
+      - name: pr tag
         if: github.ref != 'refs/heads/main'
         id: tag
         run: |
