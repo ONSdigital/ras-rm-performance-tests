@@ -457,30 +457,49 @@ class Mixins:
     auth_cookie = None
     response = None
 
-    def get(self, url: str, grouping=None, expected_response_text=None, expected_response_status=200):
+    def get(
+        self,
+        url: str,
+        grouping: str=None,
+        expected_response_text: str=None,
+        expected_response_status: int=200,
+    ):
         with self.client.get(url=url, name=grouping, allow_redirects=False, catch_response=True) as response:
-
-            if response.status_code != expected_response_status:
-                error = f"Expected a {expected_response_status} but got a {response.status_code} for url {url}"
-                response.failure(error)
-                self.interrupt()
-
-            if expected_response_text and expected_response_text not in response.text:
-                error = f"response text ({expected_response_text}) isn't in returned html"
-                response.failure(error)
-                self.interrupt()
+            self.verify_response(expected_response_status, expected_response_text, response, url)
             return response
 
-    def post(self, url: str, data: dict = {}):
-        data['csrf_token'] = self.csrf_token
-        with self.client.post(url=url, data=data, allow_redirects=False, catch_response=True) as response:
+    def post(
+        self,
+        url: str,
+        data: dict = {},
+        grouping: str=None,
+        expected_response_text: str=None,
+        expected_response_status: int=200,
+        allow_redirects: bool=True,
+    ):
+        data["csrf_token"] = self.csrf_token
 
-            if response.status_code != 302:
-                error = f"Expected a 302 but got a ({response.status_code}) for url {url} and data {data}"
-                response.failure(error)
-                self.interrupt()
-
+        with self.client.post(
+            url=url,
+            name=grouping,
+            data=data,
+            allow_redirects=allow_redirects,
+            catch_response=True
+        ) as response:
+            self.verify_response(expected_response_status, expected_response_text, response, url)
             return response
+
+    def verify_response(self, expected_response_status, expected_response_text, response, url):
+
+        if response.status_code != expected_response_status:
+            error = f"Expected a {expected_response_status} but got a {response.status_code} for url {url}"
+            response.failure(error)
+            self.interrupt()
+
+        if expected_response_text and expected_response_text not in response.text:
+            error = f"response text ({expected_response_text}) isn't in returned html"
+            response.failure(error)
+            self.interrupt()
 
 
 class FrontstageTasks(TaskSet, Mixins):
@@ -489,22 +508,26 @@ class FrontstageTasks(TaskSet, Mixins):
         self.sign_in()
 
     def sign_in(self):
-        response = self.get(url="/sign-in", expected_response_text="Sign in")
-        self.csrf_token = _capture_csrf_token(response.content.decode('utf8'))
-
-        response = self.post("/sign-in", data=_generate_random_respondent())
-        self.auth_cookie = response.cookies['authorization']
+        self.response = self.get(url="/sign-in", expected_response_text="Sign in")
+        self.csrf_token = _capture_csrf_token(self.response.content.decode('utf8'))
+        self.response = self.post(url="/sign-in",
+                                  data=_generate_random_respondent(),
+                                  allow_redirects=False,
+                                  expected_response_status=302)
+        self.auth_cookie = self.response.cookies['authorization']
 
     @task
     def perform_requests(self):
         for request in request_list:
-            grouping = None
+            grouping = request.get("grouping")
+            expected_response_text = request.get("expected_response_text")
+            expected_response_status = request.get("response_status", 200)
+
             if self.response and "harvest_url" in request:
                 soup = BeautifulSoup(self.response.text, "html.parser")
-                grouping = request["harvest_url"]["grouping"]
 
                 for link in soup.find_all(id=request["harvest_url"]["id"]):
-                    if link.get_text() == request["harvest_url"]["link_text"]:
+                    if request["harvest_url"]["link_text"] in link.get_text():
                         request_url = link.get("href")
                         break
                     logger.error(f"Unable to harvest url {request['harvest_url']}")
@@ -513,16 +536,15 @@ class FrontstageTasks(TaskSet, Mixins):
                 request_url = request["url"]
 
             if request["method"] == "GET":
-                expected_response_text = request['expected_response_text']
-                if expected_response_status:=request.get("response_status"):
-                    self.response =self.get(request_url, grouping, expected_response_text, expected_response_status)
-                else:
-                    self.response =self.get(request_url, grouping, expected_response_text)
-
+                self.response =self.get(request_url, grouping, expected_response_text, expected_response_status)
             elif request["method"] == "POST":
+                request_url = self.response.url if request_url == "self" else request_url
                 response_data = request['data']
-                self.response = self.post(request_url, response_data)
-
+                self.response = self.post(url=request_url,
+                                          data=response_data,
+                                          grouping=grouping,
+                                          expected_response_text=expected_response_text,
+                                          expected_response_status=expected_response_status)
             else:
                 raise exceptions.MethodNotAllowed(
                     valid_methods={"GET", "POST"},
