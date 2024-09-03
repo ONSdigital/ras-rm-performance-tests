@@ -18,6 +18,7 @@ from google.cloud import storage
 from locust import HttpUser, TaskSet, task, events, between
 from locust.runners import MasterRunner, LocalRunner
 
+r = random.Random()
 
 survey_short_name = 'QBS'
 survey_long_name = 'Quarterly Business Survey'
@@ -39,6 +40,9 @@ with open(requests_file, encoding='utf-8') as requests_file:
 # for the collection exercise and don't represent event data
 ignore_columns = ['surveyRef', 'exerciseRef']
 CSRF_REGEX = re.compile(r'<input id="csrf_token" name="csrf_token" type="hidden" value="(.+?)"\/?>')
+USER_WAIT_TIME_MIN_SECONDS = 5
+USER_WAIT_TIME_MAX_SECONDS = 15
+
 
 # Load data for tests
 def load_data():
@@ -550,10 +554,12 @@ class FrontstageTasks(TaskSet, Mixins):
                     valid_methods={"GET", "POST"},
                     description=f"Invalid request method {request['method']} for request to: {request_url}"
                 )
+            time.sleep(r.randint(USER_WAIT_TIME_MIN_SECONDS, USER_WAIT_TIME_MAX_SECONDS))
 
 class FrontstageLocust(HttpUser):
     tasks = {FrontstageTasks}
-    wait_time = between(5, 15)
+    wait_time = between(USER_WAIT_TIME_MIN_SECONDS, USER_WAIT_TIME_MAX_SECONDS)
+
 
 
 class GoogleCloudStorage:
