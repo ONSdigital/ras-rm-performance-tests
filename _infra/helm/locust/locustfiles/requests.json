@@ -38,7 +38,7 @@
             "data": {
                 "body": "test secure message"
             },
-            "expected_response_text": "Message sent",
+            "expected_response_text": "Click on the survey name to complete your questionnaire",
             "grouping": "/send-message"
         },
         {
