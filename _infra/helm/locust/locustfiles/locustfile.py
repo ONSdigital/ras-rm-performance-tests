@@ -30,7 +30,7 @@ respondents = int(os.getenv('test_respondents'))
 logging.basicConfig(level=logging.DEBUG, format='%(message)s')
 logger = logging.getLogger()
 
-requests_file = '/mnt/locust/' + os.getenv('requests_file')
+requests_file = './/' + os.getenv('requests_file')
 logger.info("Retrieving JSON requests from: %s", requests_file)
 with open(requests_file, encoding='utf-8') as requests_file:
     requests_json = json.load(requests_file)
@@ -40,8 +40,8 @@ with open(requests_file, encoding='utf-8') as requests_file:
 # for the collection exercise and don't represent event data
 ignore_columns = ['surveyRef', 'exerciseRef']
 CSRF_REGEX = re.compile(r'<input id="csrf_token" name="csrf_token" type="hidden" value="(.+?)"\/?>')
-USER_WAIT_TIME_MIN_SECONDS = 5
-USER_WAIT_TIME_MAX_SECONDS = 15
+USER_WAIT_TIME_MIN_SECONDS = 1
+USER_WAIT_TIME_MAX_SECONDS = 1
 
 
 # Load data for tests
@@ -136,7 +136,7 @@ def reformat_date(date):
 
 # Collection exercise loading
 def load_collection_exercises(auth):
-    config = json.load(open("/mnt/locust/collection-exercise-config.json"))
+    config = json.load(open(".//collection-exercise-config.json"))
     input_files = config['inputFiles']
     column_mappings = config['columnMappings']
     url = f"{os.getenv('collection_exercise')}/collectionexercises"
@@ -158,7 +158,7 @@ def post_collection_exercise(data, url, auth):
 
 # Collection exercise event loading
 def load_collection_exercise_events(auth):
-    config = json.load(open("/mnt/locust/collection-exercise-event-config.json"))
+    config = json.load(open(".//collection-exercise-event-config.json"))
     input_files = config['inputFiles']
     column_mappings = config['columnMappings']
     url = f"{os.getenv('collection_exercise')}/collectionexercises"
@@ -501,6 +501,10 @@ class Mixins:
             self.interrupt()
 
         if expected_response_text and expected_response_text not in response.text:
+            f = open("unexpected_response.html", "a")
+            f.write(response.text)
+            f.close()
+            logger.error(response.text)
             error = f"response text ({expected_response_text}) isn't in returned html"
             response.failure(error)
             self.interrupt()
