@@ -40,8 +40,8 @@ with open(requests_file, encoding='utf-8') as requests_file:
 # for the collection exercise and don't represent event data
 ignore_columns = ['surveyRef', 'exerciseRef']
 CSRF_REGEX = re.compile(r'<input id="csrf_token" name="csrf_token" type="hidden" value="(.+?)"\/?>')
-USER_WAIT_TIME_MIN_SECONDS = 5
-USER_WAIT_TIME_MAX_SECONDS = 15
+USER_WAIT_TIME_MIN_SECONDS = 1
+USER_WAIT_TIME_MAX_SECONDS = 1
 
 
 # Load data for tests
@@ -501,6 +501,10 @@ class Mixins:
             self.interrupt()
 
         if expected_response_text and expected_response_text not in response.text:
+            f = open("unexpected_response.html", "a")
+            f.write(response.text)
+            f.close()
+            logger.error(response.text)
             error = f"response text ({expected_response_text}) isn't in returned html"
             response.failure(error)
             self.interrupt()
