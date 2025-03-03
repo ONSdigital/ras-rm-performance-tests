@@ -2,7 +2,7 @@ locust:
   loadtest:
     name: performance-test
     headless: true
-    locust_locustfile: locustfile.py
+    locust_locustfile: seftlocustfile.py
     locust_locustfile_configmap: locust-worker
     locust_host: http://frontstage.performance.svc.cluster.local:9000
     pip_packages:
