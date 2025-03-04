@@ -20,17 +20,17 @@ from locust.runners import MasterRunner, LocalRunner
 
 r = random.Random()
 
-survey_short_name = 'QBS'
-survey_long_name = 'Quarterly Business Survey'
-survey_ref = '139'
+survey_short_name = 'ASHE'
+survey_long_name = 'Annual Survey of Hours and Earnings'
+survey_ref = '141'
 form_type = '0001'
-eq_id = '2'
-period = '1806'
+eq_id = '3'
+period = '2802'
 respondents = int(os.getenv('test_respondents'))
 logging.basicConfig(level=logging.DEBUG, format='%(message)s')
 logger = logging.getLogger()
 
-requests_file = '/mnt/locust/' + os.getenv('requests_file')
+requests_file = '/mnt/locust/' + os.getenv('requests_seft_file')
 logger.info("Retrieving JSON requests from: %s", requests_file)
 with open(requests_file, encoding='utf-8') as requests_file:
     requests_json = json.load(requests_file)
@@ -50,7 +50,7 @@ def load_data():
 
     logger.info("Container host: %s", socket.gethostname())
 
-    survey_id = load_survey(auth)
+    survey_id = load_ashe_survey(auth)
     load_collection_exercises(auth)
     load_collection_exercise_events(auth)
     load_and_link_collection_instrument(auth, survey_id)
@@ -60,7 +60,7 @@ def load_data():
 
 
 # Survey loading
-def load_survey(auth):
+def load_ashe_survey(auth):
     logger.info('Trying to find survey %s', survey_short_name)
     get_url = f"{os.getenv('survey')}/surveys/shortname/{survey_short_name}"
     get_response = requests.get(get_url, auth=auth)
@@ -89,7 +89,7 @@ def load_survey(auth):
     except requests.exceptions.HTTPError:
         if create_response.status_code == 409:
             # it exists try to retrieve it again
-            return load_survey(auth)
+            return load_ashe_survey(auth)
         logger.exception("failed to obtain survey id")
 
 
@@ -136,7 +136,7 @@ def reformat_date(date):
 
 # Collection exercise loading
 def load_collection_exercises(auth):
-    config = json.load(open("/mnt/locust/collection-exercise-config.json"))
+    config = json.load(open("/mnt/locust/collection-exercise-seft-config.json"))
     input_files = config['inputFiles']
     column_mappings = config['columnMappings']
     url = f"{os.getenv('collection_exercise')}/collectionexercises"
@@ -158,7 +158,7 @@ def post_collection_exercise(data, url, auth):
 
 # Collection exercise event loading
 def load_collection_exercise_events(auth):
-    config = json.load(open("/mnt/locust/collection-exercise-event-config.json"))
+    config = json.load(open("/mnt/locust/collection-exercise-seft-event-config.json"))
     input_files = config['inputFiles']
     column_mappings = config['columnMappings']
     url = f"{os.getenv('collection_exercise')}/collectionexercises"
@@ -206,14 +206,14 @@ def post_event(collection_exercise_id, event_tag, date, auth, url):
 
 # Collection instrument loading
 def load_and_link_collection_instrument(auth, survey_id):
-    logger.info('Uploading eQ collection instrument', extra={'survey_id': survey_id, 'form_type': form_type})
+    logger.info('Uploading SEFT collection instrument', extra={'survey_id': survey_id, 'form_type': form_type})
     post_url = f"{os.getenv('collection_instrument')}/collection-instrument-api/1.0.2/upload"
 
     post_classifiers = {"form_type": form_type, "eq_id": eq_id}
 
     params = {"classifiers": json.dumps(post_classifiers), "survey_id": survey_id}
 
-    post_response = requests.post(url=post_url, auth=auth, params=params)
+    requests.post(url=post_url, auth=auth, params=params)
 
     get_url = f"{os.getenv('collection_instrument')}/collection-instrument-api/1.0.2/collectioninstrument"
     get_classifiers = {"form_type": form_type, "SURVEY_ID": survey_id}
@@ -358,7 +358,7 @@ def get_collection_exercise_state(auth):
 # Register respondent accounts
 def register_users(auth):
     for i in range(respondents):
-        sample_unit_ref = '499' + format(str(i), "0>8s")
+        sample_unit_ref = '500' + format(str(i), "0>8s")
         email_address = sample_unit_ref + "@test.com"
         logger.info("Attempting to register user %s", email_address)
 
@@ -430,6 +430,8 @@ def data_loaded():
         return False
     return True
 
+
+#
 
 # This will only be run on Master
 @events.test_start.add_listener
