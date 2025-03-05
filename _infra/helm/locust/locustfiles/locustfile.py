@@ -24,8 +24,8 @@ survey_short_name = 'ASHE'
 survey_long_name = 'Annual Survey of Hours and Earnings'
 survey_ref = '141'
 form_type = '0001'
-eq_id = '3'
-period = '0102'
+eq_id = '2'
+period = '1806'
 respondents = int(os.getenv('test_respondents'))
 logging.basicConfig(level=logging.DEBUG, format='%(message)s')
 logger = logging.getLogger()
