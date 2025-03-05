@@ -358,7 +358,7 @@ def get_collection_exercise_state(auth):
 # Register respondent accounts
 def register_users(auth):
     for i in range(respondents):
-        sample_unit_ref = '500' + format(str(i), "0>8s")
+        sample_unit_ref = '499' + format(str(i), "0>8s")
         email_address = sample_unit_ref + "@test.com"
         logger.info("Attempting to register user %s", email_address)
 
