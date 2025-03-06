@@ -213,7 +213,7 @@ def load_and_link_collection_instrument(auth, survey_id):
 
     params = {"classifiers": json.dumps(post_classifiers), "survey_id": survey_id}
 
-    file_stream = open("064_201803_0001.csv", "r", encoding="utf-8")
+    file_stream = open("/mnt/locust/064_201803_0001.csv", "r", encoding="utf-8")
 
     files = {"file": (file_stream.name, file_stream, "application/json")}
 
