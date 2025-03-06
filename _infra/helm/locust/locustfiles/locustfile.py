@@ -213,7 +213,11 @@ def load_and_link_collection_instrument(auth, survey_id):
 
     params = {"classifiers": json.dumps(post_classifiers), "survey_id": survey_id}
 
-    requests.post(url=post_url, auth=auth, params=params)
+    file_stream = open("064_201803_0001.csv", "r", encoding="utf-8")
+
+    files = {"file": (file_stream.name, file_stream, "application/json")}
+
+    requests.post(url=post_url, files=files, params=params, auth=auth)
 
     get_url = f"{os.getenv('collection_instrument')}/collection-instrument-api/1.0.2/collectioninstrument"
     get_classifiers = {"form_type": form_type, "SURVEY_ID": survey_id}
