@@ -19,7 +19,7 @@ locust:
       security_user_name: admin
       security_user_password: secret
       test_respondent_password: password
-      test_respondents: 10
+      test_respondents: 1
       GOOGLE_CLOUD_PROJECT: "ras-rm-performance-20220908"
       GCS_BUCKET_NAME: "ras-rm-performance-20220908-locust"
       CSRF_ENABLED: true

@@ -209,7 +209,7 @@ def load_and_link_collection_instrument(auth, survey_id):
     logger.info('Uploading SEFT collection instrument', extra={'survey_id': survey_id, 'form_type': form_type})
     post_url = f"{os.getenv('collection_instrument')}/collection-instrument-api/1.0.2/upload"
 
-    post_classifiers = {"form_type": form_type, "eq_id": eq_id}
+    post_classifiers = {"form_type": form_type}
 
     params = {"classifiers": json.dumps(post_classifiers), "survey_id": survey_id}
 
