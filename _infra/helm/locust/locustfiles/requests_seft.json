@@ -21,7 +21,7 @@
             "url": "/surveys/download-survey",
             "expected_content_type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
             "expected_content_length": "1",
-            "expected_content_disposition": "attachment; filename=.//065_201803_0001.xlsx"
+            "expected_content_disposition": "attachment; filename=/mnt/locust/065_201803_0001.xlsx"
         },
         {
             "method": "POST",
