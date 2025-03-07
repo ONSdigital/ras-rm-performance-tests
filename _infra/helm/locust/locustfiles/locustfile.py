@@ -222,7 +222,7 @@ def load_and_link_collection_instrument(auth, survey_id):
     params = {"classifiers": json.dumps(post_classifiers), "survey_id": survey_id}
 
     file_stream = open("/mnt/locust/065_201803_0001.xlsx", "r", encoding="utf-8")
-    files = {"file": (file_stream.name, file_stream, "application/json")}
+    files = {"file": ("065_201803_0001.xlsx", file_stream, "application/json")}
 
     requests.post(url=post_url, files=files, params=params, auth=auth)
 
@@ -598,7 +598,7 @@ class FrontstageTasks(TaskSet, Mixins):
                 if "/surveys/upload-survey" in request["url"]:
                     request_url = request["url"] + f"?case_id={case_id}&business_party_id={ru_party_id}&survey_short_name={survey_short_name}"
                     file_stream = open("/mnt/locust/065_201803_0001.xlsx", "r", encoding="utf-8")
-                    files = {"file": (file_stream.name, file_stream, "application/json")}
+                    files = {"file": ("065_201803_0001.xlsx", file_stream, "application/json")}
                     request['data'] = {'csrf_token': ''}
                 request_url = self.response.url if request_url == "self" else request_url
                 response_data = request['data']
