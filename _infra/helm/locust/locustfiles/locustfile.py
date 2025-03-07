@@ -6,6 +6,7 @@ import logging
 import os
 import random
 import re
+
 import requests
 import socket
 import time
@@ -30,6 +31,8 @@ respondents = int(os.getenv('test_respondents'))
 logging.basicConfig(level=logging.DEBUG, format='%(message)s')
 logger = logging.getLogger()
 
+auth = (os.getenv('security_user_name'), os.getenv('security_user_password'))
+
 requests_file = '/mnt/locust/' + os.getenv('requests_seft_file')
 logger.info("Retrieving JSON requests from: %s", requests_file)
 with open(requests_file, encoding='utf-8') as requests_file:
@@ -46,8 +49,6 @@ USER_WAIT_TIME_MAX_SECONDS = 15
 
 # Load data for tests
 def load_data():
-    auth = (os.getenv('security_user_name'), os.getenv('security_user_password'))
-
     logger.info("Container host: %s", socket.gethostname())
 
     survey_id = load_ashe_survey(auth)
@@ -158,7 +159,7 @@ def post_collection_exercise(data, url, auth):
 
 # Collection exercise event loading
 def load_collection_exercise_events(auth):
-    config = json.load(open("/mnt/locust/collection-exercise-seft-event-config.json"))
+    config = json.load(open("/mnt/locust//collection-exercise-seft-event-config.json"))
     input_files = config['inputFiles']
     column_mappings = config['columnMappings']
     url = f"{os.getenv('collection_exercise')}/collectionexercises"
@@ -206,15 +207,21 @@ def post_event(collection_exercise_id, event_tag, date, auth, url):
 
 # Collection instrument loading
 def load_and_link_collection_instrument(auth, survey_id):
+    collection_exercise_id = ""
+    collection_exercise_url = f"{os.getenv('collection_exercise')}/collectionexercises"
+    collection_exercise = get_collection_exercise(survey_ref, period, collection_exercise_url, auth)
+
+    if collection_exercise:
+        collection_exercise_id = collection_exercise['id']
+
     logger.info('Uploading SEFT collection instrument', extra={'survey_id': survey_id, 'form_type': form_type})
-    post_url = f"{os.getenv('collection_instrument')}/collection-instrument-api/1.0.2/upload"
+    post_url = f"{os.getenv('collection_instrument')}/collection-instrument-api/1.0.2/upload/{collection_exercise_id}"
 
     post_classifiers = {"form_type": form_type}
 
     params = {"classifiers": json.dumps(post_classifiers), "survey_id": survey_id}
 
-    file_stream = open("/mnt/locust/064_201803_0001.csv", "r", encoding="utf-8")
-
+    file_stream = open("/mnt/locust/064_201803_0001.xlsx", "rb")
     files = {"file": (file_stream.name, file_stream, "application/json")}
 
     requests.post(url=post_url, files=files, params=params, auth=auth)
@@ -225,10 +232,7 @@ def load_and_link_collection_instrument(auth, survey_id):
     get_response = requests.get(url=get_url, auth=auth, params={'searchString': json.dumps(get_classifiers)})
     get_response.raise_for_status()
 
-    collection_exercise_url = f"{os.getenv('collection_exercise')}/collectionexercises"
-    collection_exercise = get_collection_exercise(survey_ref, period, collection_exercise_url, auth)
-    if collection_exercise:
-        collection_exercise_id = collection_exercise['id']
+    if collection_exercise_id:
 
         for ci in json.loads(get_response.text):
             logger.info('Linking collection instrument %s to exercise %s', ci['id'], period)
@@ -381,6 +385,7 @@ def register_users(auth):
             case_response.raise_for_status()
             if case_response.status_code == 200:
                 case_data = json.loads(case_response.text)[0]
+                case_id = case_data['id']
                 if case_data['iac'] is not None:
                     iac = case_data['iac']
                     case_found = True
@@ -418,7 +423,6 @@ def register_users(auth):
 
 
 def data_loaded():
-    auth = (os.getenv('security_user_name'), os.getenv('security_user_password'))
     url = f"{os.getenv('party')}/party-api/v1/respondents?emailAddress={'499' + format(str(0), '0>8s') + '@test.com'}"
     response = requests.get(url, auth=auth)
     if response.status_code != 200:
@@ -468,38 +472,52 @@ class Mixins:
     response = None
 
     def get(
-        self,
-        url: str,
-        grouping: str=None,
-        expected_response_text: str=None,
-        expected_response_status: int=200,
+            self,
+            url: str,
+            grouping: str = None,
+            expected_response_text: str = None,
+            expected_response_status: int = 200,
+            expected_content_disposition: str = None,
+            expected_content_type: str = None,
+            expected_content_length: str = None,
+            files=None,
     ):
+        if files is None:
+            files = {}
         with self.client.get(url=url, name=grouping, allow_redirects=False, catch_response=True) as response:
-            self.verify_response(expected_response_status, expected_response_text, response, url)
+            self.verify_response(expected_response_status, expected_response_text, expected_content_disposition,
+                                 expected_content_type, expected_content_length, files, response, url)
             return response
 
     def post(
-        self,
-        url: str,
-        data: dict = {},
-        grouping: str=None,
-        expected_response_text: str=None,
-        expected_response_status: int=200,
-        allow_redirects: bool=True,
+            self,
+            url: str,
+            data: dict = {},
+            grouping: str = None,
+            expected_response_text: str = None,
+            expected_response_status: int = 200,
+            allow_redirects: bool = True,
+            expected_content_disposition: str = None,
+            expected_content_type: str = None,
+            expected_content_length: str = None,
+            files=None,
     ):
         data["csrf_token"] = self.csrf_token
 
         with self.client.post(
-            url=url,
-            name=grouping,
-            data=data,
-            allow_redirects=allow_redirects,
-            catch_response=True
+                url=url,
+                name=grouping,
+                data=data,
+                allow_redirects=allow_redirects,
+                catch_response=True,
+                files=files,
         ) as response:
-            self.verify_response(expected_response_status, expected_response_text, response, url)
+            self.verify_response(expected_response_status, expected_response_text, expected_content_disposition,
+                                 expected_content_type, expected_content_length, files, response, url)
             return response
 
-    def verify_response(self, expected_response_status, expected_response_text, response, url):
+    def verify_response(self, expected_response_status, expected_response_text, expected_content_disposition,
+                        expected_content_length, expected_content_type, files, response, url):
 
         if response.status_code != expected_response_status:
             error = f"Expected a {expected_response_status} but got a {response.status_code} for url {url}"
@@ -511,9 +529,21 @@ class Mixins:
             response.failure(error)
             self.interrupt()
 
+        if expected_content_disposition and expected_content_disposition not in str(response.headers):
+            error = f"Expected content disposition {expected_content_disposition} does not match returned header"
+            response.failure(error)
+            self.interrupt()
+        if expected_content_type and expected_content_type not in str(response.headers):
+            error = f"Expected content type {expected_content_type} does not match returned header"
+            response.failure(error)
+            self.interrupt()
+        if expected_content_length and expected_content_length not in str(response.headers):
+            error = f"Expected content length {expected_content_length} does not match returned header"
+            response.failure(error)
+            self.interrupt()
+
 
 class FrontstageTasks(TaskSet, Mixins):
-
     def on_start(self):
         self.sign_in()
 
@@ -526,35 +556,59 @@ class FrontstageTasks(TaskSet, Mixins):
                                   expected_response_status=302)
         self.auth_cookie = self.response.cookies['authorization']
 
+    def get_seft_information(self):
+        party_ru_url = f"{os.getenv('party')}/party-api/v1/businesses/ref/49900000000"
+        party_response = requests.get(party_ru_url, auth=auth)
+        party_response.raise_for_status()
+        ru_party_id = json.loads(party_response.text)['id']
+        case_url = f"{os.getenv('case')}/cases/partyid/{ru_party_id}"
+        case_response = requests.get(case_url, auth=auth, params={"iac": "true"})
+        case_response.raise_for_status()
+        case_data = json.loads(case_response.text)[0]
+        case_id = case_data['id']
+        return case_id, ru_party_id, auth
+
     @task
     def perform_requests(self):
+        case_id, ru_party_id, auth = self.get_seft_information()
         for request in request_list:
             grouping = request.get("grouping")
             expected_response_text = request.get("expected_response_text")
             expected_response_status = request.get("response_status", 200)
+            expected_content_disposition = request.get("expected_content_disposition")
+            expected_content_type = request.get("expected_content_type")
+            expected_content_length = request.get("expected_content_length")
 
             if self.response and "harvest_url" in request:
                 soup = BeautifulSoup(self.response.text, "html.parser")
-
                 for link in soup.find_all(id=request["harvest_url"]["id"]):
                     if request["harvest_url"]["link_text"] in link.get_text():
                         request_url = link.get("href")
                         break
                     logger.error(f"Unable to harvest url {request['harvest_url']}")
                     self.interrupt()
+            elif "/surveys/download-survey" in request["url"]:
+                request_url = request["url"] + f"?case_id={case_id}&business_party_id={ru_party_id}&survey_short_name={survey_short_name}"
             else:
                 request_url = request["url"]
-
             if request["method"] == "GET":
-                self.response =self.get(request_url, grouping, expected_response_text, expected_response_status)
+                self.response = self.get(request_url, grouping, expected_response_text, expected_response_status,
+                                         expected_content_disposition, expected_content_type, expected_content_length)
             elif request["method"] == "POST":
+                files = {}
+                if "/surveys/upload-survey" in request["url"]:
+                    request_url = request["url"] + f"?case_id={case_id}&business_party_id={ru_party_id}&survey_short_name={survey_short_name}"
+                    file_stream = open("/mnt/locust/064_201803_0001.xlsx", "rb")
+                    files = {"file": (file_stream.name, file_stream, "application/json")}
+                    request['data'] = {'csrf_token': ''}
                 request_url = self.response.url if request_url == "self" else request_url
                 response_data = request['data']
                 self.response = self.post(url=request_url,
                                           data=response_data,
                                           grouping=grouping,
                                           expected_response_text=expected_response_text,
-                                          expected_response_status=expected_response_status)
+                                          expected_response_status=expected_response_status,
+                                          files=files)
             else:
                 raise exceptions.MethodNotAllowed(
                     valid_methods={"GET", "POST"},
@@ -562,10 +616,10 @@ class FrontstageTasks(TaskSet, Mixins):
                 )
             time.sleep(r.randint(USER_WAIT_TIME_MIN_SECONDS, USER_WAIT_TIME_MAX_SECONDS))
 
+
 class FrontstageLocust(HttpUser):
     tasks = {FrontstageTasks}
     wait_time = between(USER_WAIT_TIME_MIN_SECONDS, USER_WAIT_TIME_MAX_SECONDS)
-
 
 
 class GoogleCloudStorage:
@@ -589,5 +643,5 @@ def _capture_csrf_token(html):
 
 
 def _generate_random_respondent():
-    respondent_email = f"499{random.randint(0, respondents-1):08}@test.com"
+    respondent_email = f"499{random.randint(0, respondents - 1):08}@test.com"
     return {"username": respondent_email, "password": os.getenv("test_respondent_password")}
