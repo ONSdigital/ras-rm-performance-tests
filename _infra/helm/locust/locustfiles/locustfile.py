@@ -532,10 +532,12 @@ class Mixins:
             error = f"Expected content disposition {expected_content_disposition} does not match returned header"
             response.failure(error)
             self.interrupt()
+
         if expected_content_type and expected_content_type not in str(response.headers):
             error = f"Expected content type {expected_content_type} does not match returned header"
             response.failure(error)
             self.interrupt()
+
         if expected_content_length and expected_content_length not in str(response.headers):
             error = f"Expected content length {expected_content_length} does not match returned header"
             response.failure(error)
