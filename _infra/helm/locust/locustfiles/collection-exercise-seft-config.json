@@ -1,6 +1,6 @@
 {
     "inputFiles": [
-        ".//ce_seft_details.csv"
+        "/mnt/locust/ce_seft_details.csv"
     ],
     "columnMappings": {
         "Survey_Id": "surveyRef",

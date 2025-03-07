@@ -385,7 +385,6 @@ def register_users(auth):
             case_response.raise_for_status()
             if case_response.status_code == 200:
                 case_data = json.loads(case_response.text)[0]
-                case_id = case_data['id']
                 if case_data['iac'] is not None:
                     iac = case_data['iac']
                     case_found = True
@@ -566,11 +565,11 @@ class FrontstageTasks(TaskSet, Mixins):
         case_response.raise_for_status()
         case_data = json.loads(case_response.text)[0]
         case_id = case_data['id']
-        return case_id, ru_party_id, auth
+        return case_id, ru_party_id
 
     @task
     def perform_requests(self):
-        case_id, ru_party_id, auth = self.get_seft_information()
+        case_id, ru_party_id = self.get_seft_information()
         for request in request_list:
             grouping = request.get("grouping")
             expected_response_text = request.get("expected_response_text")
