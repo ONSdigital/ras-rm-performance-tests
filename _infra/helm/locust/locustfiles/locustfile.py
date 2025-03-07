@@ -159,7 +159,7 @@ def post_collection_exercise(data, url, auth):
 
 # Collection exercise event loading
 def load_collection_exercise_events(auth):
-    config = json.load(open("/mnt/locust//collection-exercise-seft-event-config.json"))
+    config = json.load(open("/mnt/locust/collection-exercise-seft-event-config.json"))
     input_files = config['inputFiles']
     column_mappings = config['columnMappings']
     url = f"{os.getenv('collection_exercise')}/collectionexercises"
