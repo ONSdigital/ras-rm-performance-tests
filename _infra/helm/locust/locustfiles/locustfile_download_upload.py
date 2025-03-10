@@ -14,8 +14,6 @@ from datetime import timezone, datetime
 from functools import partial
 from bs4 import BeautifulSoup
 
-from werkzeug import exceptions
-from google.cloud import storage
 from locust import HttpUser, TaskSet, task, events, between
 from locust.runners import MasterRunner, LocalRunner
 
