@@ -437,6 +437,7 @@ def data_loaded():
         return False
     return True
 
+
 # This will only be run on Master
 @events.test_start.add_listener
 def on_test_start(environment, **kwargs):
@@ -509,9 +510,9 @@ class Mixins:
             self.interrupt()
 
         if expected_content_disposition and expected_content_disposition != response.headers.get('Content-Disposition'):
-             error = f"Expected content disposition {expected_content_disposition} does not match returned header"
-             response.failure(error)
-             self.interrupt()
+            error = f"Expected content disposition {expected_content_disposition} does not match returned header"
+            response.failure(error)
+            self.interrupt()
 
         if expected_content_type and expected_content_type != response.headers.get('Content-type'):
             error = f"Expected content type {expected_content_type} does not match returned header"
@@ -576,7 +577,7 @@ class FrontstageTasks(TaskSet, Mixins):
         ######################################
         # Step 4: Upload spreadsheet
         ######################################
-
+        logger.info("Uploading survey for Todo")  # Testing purposes
         file_stream = open("/mnt/locust/065_201803_0002.xlsx", "r", encoding="utf-8")
         files = {"file": ("065_201803_0002.xlsx", file_stream, "application/json")}
         self.response = self.post(url=request_url_upload,
@@ -587,7 +588,6 @@ class FrontstageTasks(TaskSet, Mixins):
 
     @task
     def perform_requests(self):
-
         ######################################
         # Step 5: History page
         ######################################
@@ -627,7 +627,7 @@ class FrontstageTasks(TaskSet, Mixins):
         ######################################
         # Step 8: Upload spreadsheet
         ######################################
-
+        logger.info("Uploading survey for history")  # Testing purposes
         file_stream = open("/mnt/locust/065_201803_0002.xlsx", "r", encoding="utf-8")
         files = {"file": ("065_201803_0002.xlsx", file_stream, "application/json")}
         self.response = self.post(url=request_url_upload,
