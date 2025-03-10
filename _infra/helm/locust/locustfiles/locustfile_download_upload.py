@@ -33,7 +33,7 @@ logger = logging.getLogger()
 
 auth = (os.getenv('security_user_name'), os.getenv('security_user_password'))
 
-requests_file = './/' + os.getenv('requests_file')
+requests_file = '/mnt/locust/' + os.getenv('requests_file')
 logger.info("Retrieving JSON requests from: %s", requests_file)
 with open(requests_file, encoding='utf-8') as requests_file:
     requests_json = json.load(requests_file)
@@ -137,7 +137,7 @@ def reformat_date(date):
 
 # Collection exercise loading
 def load_collection_exercises(auth):
-    config = json.load(open(".//collection-exercise-seft-config.json"))
+    config = json.load(open("/mnt/locust/collection-exercise-seft-config.json"))
     input_files = config['inputFiles']
     column_mappings = config['columnMappings']
     url = f"{os.getenv('collection_exercise')}/collectionexercises"
@@ -159,7 +159,7 @@ def post_collection_exercise(data, url, auth):
 
 # Collection exercise event loading
 def load_collection_exercise_events(auth):
-    config = json.load(open(".//collection-exercise-seft-event-config.json"))
+    config = json.load(open("/mnt/locust/collection-exercise-seft-event-config.json"))
     input_files = config['inputFiles']
     column_mappings = config['columnMappings']
     url = f"{os.getenv('collection_exercise')}/collectionexercises"
@@ -221,7 +221,7 @@ def load_and_link_collection_instrument(auth, survey_id):
 
     params = {"classifiers": json.dumps(post_classifiers), "survey_id": survey_id}
 
-    file_stream = open(".//065_201803_0002.xlsx", "r", encoding="utf-8")
+    file_stream = open("/mnt/locust/065_201803_0002.xlsx", "r", encoding="utf-8")
     files = {"file": ("065_201803_0002.xlsx", file_stream, "application/json")}
 
     requests.post(url=post_url, files=files, params=params, auth=auth)
@@ -546,26 +546,26 @@ class FrontstageTasks(TaskSet, Mixins):
                                  grouping="/surveys/todo",
                                  expected_response_text="Annual Survey of Hours and Earnings",
                                  expected_response_status=200)
-
         soup = BeautifulSoup(self.response.text, "html.parser")
-        case_id, ru_party_id = self.get_seft_information(soup)
+        request_url = soup.find('a', href=True, string="Annual Survey of Hours and Earnings").get('href')
 
         ######################################
         # Step 2: Access Survey page
         ######################################
 
-        request_url = soup.find('a', href=True, string="Annual Survey of Hours and Earnings").get('href')
         self.response = self.get(url=request_url,
                                  grouping="/surveys/access-survey",
                                  expected_response_text="ASHE spreadsheet for",
                                  expected_response_status=200)
+        soup = BeautifulSoup(self.response.text, "html.parser")
+        request_url_download = soup.find(id="download_survey_button").get('href')
+        request_url_upload = soup.find(id="surveys_upload_form").get('action')
 
         ######################################
         # Step 3: Download spreadsheet
         ######################################
 
-        request_url = f"/surveys/download-survey?case_id={case_id}&business_party_id={ru_party_id}&survey_short_name={survey_short_name}"
-        self.response = self.get(url=request_url,
+        self.response = self.get(url=request_url_download,
                                  grouping="/surveys/download-survey",
                                  expected_response_text="All work and no play makes Jack a dull boy",
                                  expected_response_status=200,
@@ -577,10 +577,9 @@ class FrontstageTasks(TaskSet, Mixins):
         # Step 4: Upload spreadsheet
         ######################################
 
-        request_url = f"/surveys/upload-survey?case_id={case_id}&business_party_id={ru_party_id}&survey_short_name={survey_short_name}"
-        file_stream = open(".//065_201803_0002.xlsx", "r", encoding="utf-8")
+        file_stream = open("/mnt/locust/065_201803_0002.xlsx", "r", encoding="utf-8")
         files = {"file": ("065_201803_0002.xlsx", file_stream, "application/json")}
-        self.response = self.post(url=request_url,
+        self.response = self.post(url=request_url_upload,
                                   grouping="/surveys/upload-survey",
                                   expected_response_text="File uploaded successfully",
                                   expected_response_status=200,
@@ -599,24 +598,25 @@ class FrontstageTasks(TaskSet, Mixins):
                                  expected_response_status=200)
 
         soup = BeautifulSoup(self.response.text, "html.parser")
-        case_id, ru_party_id = self.get_seft_information(soup)
+        request_url = soup.find('a', href=True, string="Annual Survey of Hours and Earnings").get('href')
 
         ######################################
         # Step 6: Access Survey page
         ######################################
 
-        request_url = soup.find('a', href=True, string="Annual Survey of Hours and Earnings").get('href')
         self.response = self.get(url=request_url,
                                  grouping="/surveys/access-survey",
                                  expected_response_text="ASHE spreadsheet for",
                                  expected_response_status=200)
+        soup = BeautifulSoup(self.response.text, "html.parser")
+        request_url_download = soup.find(id="download_survey_button").get('href')
+        request_url_upload = soup.find(id="surveys_upload_form").get('action')
 
         ######################################
         # Step 7: Download spreadsheet
         ######################################
 
-        request_url = f"/surveys/download-survey?case_id={case_id}&business_party_id={ru_party_id}&survey_short_name={survey_short_name}"
-        self.response = self.get(url=request_url,
+        self.response = self.get(url=request_url_download,
                                  grouping="/surveys/download-survey",
                                  expected_response_text="All work and no play makes Jack a dull boy",
                                  expected_response_status=200,
@@ -628,34 +628,15 @@ class FrontstageTasks(TaskSet, Mixins):
         # Step 8: Upload spreadsheet
         ######################################
 
-        request_url = f"/surveys/upload-survey?case_id={case_id}&business_party_id={ru_party_id}&survey_short_name={survey_short_name}"
-        file_stream = open(".//065_201803_0002.xlsx", "r", encoding="utf-8")
+        file_stream = open("/mnt/locust/065_201803_0002.xlsx", "r", encoding="utf-8")
         files = {"file": ("065_201803_0002.xlsx", file_stream, "application/json")}
-        self.response = self.post(url=request_url,
+        self.response = self.post(url=request_url_upload,
                                   grouping="/surveys/upload-survey",
                                   expected_response_text="File uploaded successfully",
                                   expected_response_status=200,
                                   files=files)
 
         time.sleep(r.randint(USER_WAIT_TIME_MIN_SECONDS, USER_WAIT_TIME_MAX_SECONDS))
-
-    def get_seft_information(self, soup ):
-
-        # Grab the RU from the initial page before we get going
-        for dt in soup.find_all("dt"):
-            if dt.text == "RU ref: ":
-                ruref = dt.find_next_sibling("dd").text
-
-        party_ru_url = f"{os.getenv('party')}/party-api/v1/businesses/ref/{ruref}"
-        party_response = requests.get(party_ru_url, auth=auth)
-        party_response.raise_for_status()
-        ru_party_id = json.loads(party_response.text)['id']
-        case_url = f"{os.getenv('case')}/cases/partyid/{ru_party_id}"
-        case_response = requests.get(case_url, auth=auth, params={"iac": "true"})
-        case_response.raise_for_status()
-        case_data = json.loads(case_response.text)[0]
-        case_id = case_data['id']
-        return case_id, ru_party_id
 
 
 class FrontstageLocust(HttpUser):
