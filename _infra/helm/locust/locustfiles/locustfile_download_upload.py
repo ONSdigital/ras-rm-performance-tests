@@ -221,8 +221,8 @@ def load_and_link_collection_instrument(auth, survey_id):
 
     params = {"classifiers": json.dumps(post_classifiers), "survey_id": survey_id}
 
-    file_stream = open("/mnt/locust/065_201803_0002.xlsx", "r", encoding="utf-8")
-    files = {"file": ("065_201803_0002.xlsx", file_stream, "application/json")}
+    file_stream = open("/mnt/locust/065_201803_0001.xlsx", "r", encoding="utf-8")
+    files = {"file": ("065_201803_0001.xlsx", file_stream, "application/json")}
 
     requests.post(url=post_url, files=files, params=params, auth=auth)
 
@@ -437,7 +437,6 @@ def data_loaded():
         return False
     return True
 
-
 # This will only be run on Master
 @events.test_start.add_listener
 def on_test_start(environment, **kwargs):
@@ -568,18 +567,18 @@ class FrontstageTasks(TaskSet, Mixins):
 
         self.response = self.get(url=request_url_download,
                                  grouping="/surveys/download-survey",
-                                 expected_response_text="All work and no play makes Jack a dull boy",
+                                 expected_response_text="US006: Load SEFT Collection Instruments",
                                  expected_response_status=200,
-                                 expected_content_disposition="attachment; filename=065_201803_0002.xlsx",
+                                 expected_content_disposition="attachment; filename=065_201803_0001.xlsx",
                                  expected_content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                                 expected_content_length="1900800")
+                                 expected_content_length="39")
 
         ######################################
         # Step 4: Upload spreadsheet
         ######################################
-        logger.info("Uploading survey for Todo")  # Testing purposes
-        file_stream = open("/mnt/locust/065_201803_0002.xlsx", "r", encoding="utf-8")
-        files = {"file": ("065_201803_0002.xlsx", file_stream, "application/json")}
+
+        file_stream = open("/mnt/locust/065_201803_0001.xlsx", "r", encoding="utf-8")
+        files = {"file": ("065_201803_0001.xlsx", file_stream, "application/json")}
         self.response = self.post(url=request_url_upload,
                                   grouping="/surveys/upload-survey",
                                   expected_response_text="File uploaded successfully",
@@ -618,18 +617,18 @@ class FrontstageTasks(TaskSet, Mixins):
 
         self.response = self.get(url=request_url_download,
                                  grouping="/surveys/download-survey",
-                                 expected_response_text="All work and no play makes Jack a dull boy",
+                                 expected_response_text="US006: Load SEFT Collection Instruments",
                                  expected_response_status=200,
-                                 expected_content_disposition="attachment; filename=065_201803_0002.xlsx",
+                                 expected_content_disposition="attachment; filename=065_201803_0001.xlsx",
                                  expected_content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                                 expected_content_length="1900800")
+                                 expected_content_length="39")
 
         ######################################
         # Step 8: Upload spreadsheet
         ######################################
-        logger.info("Uploading survey for history")  # Testing purposes
-        file_stream = open("/mnt/locust/065_201803_0002.xlsx", "r", encoding="utf-8")
-        files = {"file": ("065_201803_0002.xlsx", file_stream, "application/json")}
+
+        file_stream = open("/mnt/locust/065_201803_0001.xlsx", "r", encoding="utf-8")
+        files = {"file": ("065_201803_0001.xlsx", file_stream, "application/json")}
         self.response = self.post(url=request_url_upload,
                                   grouping="/surveys/upload-survey",
                                   expected_response_text="File uploaded successfully",
