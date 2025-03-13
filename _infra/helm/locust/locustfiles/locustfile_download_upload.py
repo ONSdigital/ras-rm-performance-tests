@@ -31,18 +31,13 @@ logger = logging.getLogger()
 
 auth = (os.getenv('security_user_name'), os.getenv('security_user_password'))
 
-requests_file = '/mnt/locust/' + os.getenv('requests_file')
-logger.info("Retrieving JSON requests from: %s", requests_file)
-with open(requests_file, encoding='utf-8') as requests_file:
-    requests_json = json.load(requests_file)
-    request_list = requests_json["requests"]
-
 # Ignore these during collection exercise event processing as they are the key
 # for the collection exercise and don't represent event data
 ignore_columns = ['surveyRef', 'exerciseRef']
 CSRF_REGEX = re.compile(r'<input id="csrf_token" name="csrf_token" type="hidden" value="(.+?)"\/?>')
-USER_WAIT_TIME_MIN_SECONDS = 5
-USER_WAIT_TIME_MAX_SECONDS = 15
+# USER_WAIT_TIME_WAIT_TIME is between GET and POST requests
+USER_WAIT_TIME_MIN_SECONDS = 2
+USER_WAIT_TIME_MAX_SECONDS = 5
 
 
 # Load data for tests
@@ -464,6 +459,7 @@ class Mixins:
         with self.client.get(url=url, name=grouping, allow_redirects=False, catch_response=True) as response:
             self.verify_response(expected_response_status, expected_response_text, expected_content_disposition,
                                  expected_content_type, expected_content_length, files, response, url)
+            time.sleep(r.randint(USER_WAIT_TIME_MIN_SECONDS, USER_WAIT_TIME_MAX_SECONDS))
             return response
 
     def post(
@@ -491,6 +487,7 @@ class Mixins:
         ) as response:
             self.verify_response(expected_response_status, expected_response_text, expected_content_disposition,
                                  expected_content_type, expected_content_length, files, response, url)
+            time.sleep(r.randint(USER_WAIT_TIME_MIN_SECONDS, USER_WAIT_TIME_MAX_SECONDS))
             return response
 
     def verify_response(self, expected_response_status, expected_response_text, expected_content_disposition,
@@ -542,46 +539,49 @@ class FrontstageTasks(TaskSet, Mixins):
 
         self.response = self.get(url="/surveys/todo",
                                  grouping="/surveys/todo",
-                                 expected_response_text="Annual Survey of Hours and Earnings",
+                                 expected_response_text="Click on the survey name to complete your questionnaire",
                                  expected_response_status=200)
         soup = BeautifulSoup(self.response.text, "html.parser")
-        request_url = soup.find('a', href=True, string="Annual Survey of Hours and Earnings").get('href')
+        link = soup.find('a', href=True, string="Annual Survey of Hours and Earnings")
 
         ######################################
         # Step 2: Access Survey page
         ######################################
 
-        self.response = self.get(url=request_url,
-                                 grouping="/surveys/access-survey",
-                                 expected_response_text="ASHE spreadsheet for",
-                                 expected_response_status=200)
-        soup = BeautifulSoup(self.response.text, "html.parser")
-        request_url_download = soup.find(id="download_survey_button").get('href')
-        request_url_upload = soup.find(id="surveys_upload_form").get('action')
+        if link != None:
+            request_url = link.get('href')
+            self.response = self.get(url=request_url,
+                                     grouping="/surveys/access-survey",
+                                     expected_response_text="ASHE spreadsheet for",
+                                     expected_response_status=200)
+            soup = BeautifulSoup(self.response.text, "html.parser")
+            request_url_download = soup.find(id="download_survey_button").get('href')
+            request_url_upload = soup.find(id="surveys_upload_form").get('action')
 
-        ######################################
-        # Step 3: Download spreadsheet
-        ######################################
+            ######################################
+            # Step 3: Download spreadsheet
+            ######################################
 
-        self.response = self.get(url=request_url_download,
-                                 grouping="/surveys/download-survey",
-                                 expected_response_text="US006: Load SEFT Collection Instruments",
-                                 expected_response_status=200,
-                                 expected_content_disposition="attachment; filename=065_201803_0001.xlsx",
-                                 expected_content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                                 expected_content_length="39")
+            self.response = self.get(url=request_url_download,
+                                     grouping="/surveys/download-survey",
+                                     expected_response_text="US006: Load SEFT Collection Instruments",
+                                     expected_response_status=200,
+                                     expected_content_disposition="attachment; filename=065_201803_0001.xlsx",
+                                     expected_content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                                     expected_content_length="39")
 
-        ######################################
-        # Step 4: Upload spreadsheet
-        ######################################
+            ######################################
+            # Step 4: Upload spreadsheet
+            ######################################
 
-        file_stream = open("/mnt/locust/065_201803_0001.xlsx", "r", encoding="utf-8")
-        files = {"file": ("065_201803_0001.xlsx", file_stream, "application/json")}
-        self.response = self.post(url=request_url_upload,
-                                  grouping="/surveys/upload-survey",
-                                  expected_response_text="File uploaded successfully",
-                                  expected_response_status=200,
-                                  files=files)
+            file_stream = open("/mnt/locust/065_201803_0001.xlsx", "r", encoding="utf-8")
+            files = {"file": ("065_201803_0001.xlsx", file_stream, "application/json")}
+            self.response = self.post(url=request_url_upload,
+                                      grouping="/surveys/upload-survey",
+                                      expected_response_text="File uploaded successfully",
+                                      expected_response_status=200,
+                                      files=files)
+
 
     @task
     def perform_requests(self):
@@ -589,13 +589,19 @@ class FrontstageTasks(TaskSet, Mixins):
         # Step 5: History page
         ######################################
 
-        self.response = self.get(url="/surveys/history",
-                                 grouping="/surveys/history",
-                                 expected_response_text="Annual Survey of Hours and Earnings",
-                                 expected_response_status=200)
+        request_url = None
+        while request_url is None:
+            self.response = self.get(url="/surveys/history",
+                                     grouping="/surveys/history",
+                                     expected_response_text="Annual Survey of Hours and Earnings",
+                                     expected_response_status=200)
 
-        soup = BeautifulSoup(self.response.text, "html.parser")
-        request_url = soup.find('a', href=True, string="Annual Survey of Hours and Earnings").get('href')
+            soup = BeautifulSoup(self.response.text, "html.parser")
+            link = soup.find('a', href=True, string="Annual Survey of Hours and Earnings")
+            if link:
+                request_url = link.get('href')
+            else:
+                time.sleep(1)
 
         ######################################
         # Step 6: Access Survey page
@@ -633,12 +639,9 @@ class FrontstageTasks(TaskSet, Mixins):
                                   expected_response_status=200,
                                   files=files)
 
-        time.sleep(r.randint(USER_WAIT_TIME_MIN_SECONDS, USER_WAIT_TIME_MAX_SECONDS))
-
 
 class FrontstageLocust(HttpUser):
     tasks = {FrontstageTasks}
-    wait_time = between(USER_WAIT_TIME_MIN_SECONDS, USER_WAIT_TIME_MAX_SECONDS)
 
 
 def _capture_csrf_token(html):
