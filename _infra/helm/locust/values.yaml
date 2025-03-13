@@ -24,7 +24,8 @@ locust:
       GCS_BUCKET_NAME: "ras-rm-performance-20220908-locust"
       CSRF_ENABLED: true
       requests_file: requests.json
-      requests_seft_file: requests_seft.json
+      user_wait_time_min_seconds: 2
+      user_wait_time_max_seconds: 3
 
   master:
     replicas: 1

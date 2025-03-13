@@ -36,8 +36,8 @@ auth = (os.getenv('security_user_name'), os.getenv('security_user_password'))
 ignore_columns = ['surveyRef', 'exerciseRef']
 CSRF_REGEX = re.compile(r'<input id="csrf_token" name="csrf_token" type="hidden" value="(.+?)"\/?>')
 # USER_WAIT_TIME_WAIT_TIME is between GET and POST requests
-USER_WAIT_TIME_MIN_SECONDS = 2
-USER_WAIT_TIME_MAX_SECONDS = 5
+USER_WAIT_TIME_MIN_SECONDS = f"{os.getenv('user_wait_time_min_seconds')}"
+USER_WAIT_TIME_MAX_SECONDS = f"{os.getenv('user_wait_time_max_seconds')}"
 
 
 # Load data for tests
@@ -581,7 +581,6 @@ class FrontstageTasks(TaskSet, Mixins):
                                       expected_response_text="File uploaded successfully",
                                       expected_response_status=200,
                                       files=files)
-
 
     @task
     def perform_requests(self):
