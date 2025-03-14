@@ -79,19 +79,35 @@ Once completed, run:
 
 ### Database clear down between tests
 
-Firstly, whitelist you IP using the ras commands for the target environment. Then get the database credentials
+**NOTE**: The below commands **should** only ever be ran in dev (under your namespace) or in performance.
 
-`export [TARGET-NAMESPACE]_PASSWORD_[TARGET-SERVICE]=$(kubectl get secret [DB-CREDENTIALS] -o json --namespace=[TARGET-NAMESPACE] | jq -r '.data."[PASSWORD-KEY]"' | base64 -d)`
+Firstly, whitelist your IP using the ras commands for the dev or performance. Then get the database for either dev or 
+performance credentials:
 
-The above command will need to be replicated for all the schemas affected by the Locust tests. When using dev, this 
-will only be a single command.
+**DEV**
 
-Once the passwords have been exported to your local machine, run the following:
+`export DEV_PASSWORD_DATABASE=$(kubectl get secret [DB-CREDENTIALS] -o json --namespace=[YOUR-NAMESPACE] | jq -r '.data."[PASSWORD-KEY]"' | base64 -d)`
 
-`psql postgresql://case:$[TARGET-NAMESPACE]_PASSWORD_[TARGET-SERVICE]@localhost:5432/[TARGET-SCHEMA-NAME] -U postgres -f [FILEPATH-FROM-YOUR-LOCAL-MACHINE]Services/ras-rm-cucumber/_infra/helm/acceptance-tests/files/[SCRIPT-NAME]`
+**PERFORMANCE**
 
-Again, the above command will need to be replicated for all the schemas affected by the Locust tests. When using dev, this 
-will only be a single command. The scripts that need running during multiple attempts are:
+`export PERFORMANCE_PASSWORD_[TARGET-SERVICE]=$(kubectl get secret [DB-CREDENTIALS] -o json --namespace=performance | jq -r '.data."[PASSWORD-KEY]"' | base64 -d)`
+
+The above command for performance will need to be replicated for all the schemas affected by the Locust tests. When 
+using dev, this will only be a single command.
+
+Once the password(s) have been exported to your local machine, run one of the following:
+
+**DEV**
+
+`psql postgresql://postgres:$DEV_PASSWORD_DATABASE@localhost:5432/ras -U postgres -f [FILEPATH-FROM-YOUR-LOCAL-MACHINE]Services/ras-rm-cucumber/_infra/helm/acceptance-tests/files/[SCRIPT-NAME]`
+
+**PERFORMANCE**
+
+`psql postgresql://[TARGET-SERVICE]:$PERFORMANCE_PASSWORD_[TARGET-SERVICE]@localhost:5432/[TARGET-SCHEMA-NAME] -U postgres -f [FILEPATH-FROM-YOUR-LOCAL-MACHINE]Services/ras-rm-cucumber/_infra/helm/acceptance-tests/files/[SCRIPT-NAME]`
+
+Again, the above commands for will need to be replicated for all the schemas affected by the Locust tests. The scripts 
+referenced in the commands can be found in `ras-rm-cucumber`. When using dev, this will only be a single command. The 
+scripts that need running during multiple attempts are:
 
 
 ```
