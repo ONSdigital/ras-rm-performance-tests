@@ -41,8 +41,8 @@ with open(requests_file, encoding='utf-8') as requests_file:
 ignore_columns = ['surveyRef', 'exerciseRef']
 CSRF_REGEX = re.compile(r'<input id="csrf_token" name="csrf_token" type="hidden" value="(.+?)"\/?>')
 # USER_WAIT_TIME_WAIT_TIME is between GET and POST requests
-USER_WAIT_TIME_MIN_SECONDS = int(os.getenv('user_wait_time_min_seconds'))
-USER_WAIT_TIME_MAX_SECONDS = int(os.getenv('user_wait_time_max_seconds'))
+USER_WAIT_TIME_MIN_SECONDS = int(os.getenv('user_wait_time_min_seconds', 5))
+USER_WAIT_TIME_MAX_SECONDS = int(os.getenv('user_wait_time_max_seconds', 15))
 
 
 # Load data for tests
