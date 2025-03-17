@@ -86,7 +86,7 @@ performance credentials:
 
 **DEV**
 
-`export DEV_PASSWORD_DATABASE=$(kubectl get secret [DB-CREDENTIALS] -o json --namespace=[YOUR-NAMESPACE] | jq -r '.data."[PASSWORD-KEY]"' | base64 -d)`
+`psql postgresql://postgres:postgres@localhost:5432/ras -U postgres -f [FILEPATH-FROM-YOUR-LOCAL-MACHINE]Services/ras-rm-cucumber/_infra/helm/acceptance-tests/files/[SCRIPT-NAME]`
 
 **PERFORMANCE**
 
