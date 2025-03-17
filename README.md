@@ -109,7 +109,6 @@ Again, the above commands for will need to be replicated for all the schemas aff
 referenced in the commands can be found in `ras-rm-cucumber`. When using dev, this will only be a single command. The 
 scripts that need running during multiple attempts are:
 
-
 ```
 database_case_clear.sql
 database_reset_oauth.sql
@@ -120,3 +119,8 @@ database_reset_uaa.sql
 database_reset_sample.sql
 database_reset_ras_ci.sql (dev only)
 ```
+
+## Manual Testing
+
+Files in the `standalone-scripts` folder are intended to run manually and can be run using the commands mentioned above. 
+They are **not** part of the daily Locust test runs and so are separated from the files within the `locust` subdirectory.

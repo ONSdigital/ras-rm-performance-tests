@@ -533,20 +533,12 @@ class FrontstageTasks(TaskSet, Mixins):
                                   expected_response_status=302)
         self.auth_cookie = self.response.cookies['authorization']
 
-        ######################################
-        # Step 1: To Do page
-        ######################################
-
         self.response = self.get(url="/surveys/todo",
                                  grouping="/surveys/todo",
                                  expected_response_text="Click on the survey name to complete your questionnaire",
                                  expected_response_status=200)
         soup = BeautifulSoup(self.response.text, "html.parser")
         link = soup.find('a', href=True, string="Annual Survey of Hours and Earnings")
-
-        ######################################
-        # Step 2: Access Survey page
-        ######################################
 
         if link != None:
             request_url = link.get('href')
@@ -558,10 +550,6 @@ class FrontstageTasks(TaskSet, Mixins):
             request_url_download = soup.find(id="download_survey_button").get('href')
             request_url_upload = soup.find(id="surveys_upload_form").get('action')
 
-            ######################################
-            # Step 3: Download spreadsheet
-            ######################################
-
             self.response = self.get(url=request_url_download,
                                      grouping="/surveys/download-survey",
                                      expected_response_text="US006: Load SEFT Collection Instruments",
@@ -569,10 +557,6 @@ class FrontstageTasks(TaskSet, Mixins):
                                      expected_content_disposition="attachment; filename=065_201803_0001.xlsx",
                                      expected_content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                                      expected_content_length="39")
-
-            ######################################
-            # Step 4: Upload spreadsheet
-            ######################################
 
             file_stream = open("/mnt/locust/065_201803_0001.xlsx", "r", encoding="utf-8")
             files = {"file": ("065_201803_0001.xlsx", file_stream, "application/json")}
@@ -584,10 +568,6 @@ class FrontstageTasks(TaskSet, Mixins):
 
     @task
     def perform_requests(self):
-        ######################################
-        # Step 5: History page
-        ######################################
-
         request_url = None
         while request_url is None:
             self.response = self.get(url="/surveys/history",
@@ -602,10 +582,6 @@ class FrontstageTasks(TaskSet, Mixins):
             else:
                 time.sleep(1)
 
-        ######################################
-        # Step 6: Access Survey page
-        ######################################
-
         self.response = self.get(url=request_url,
                                  grouping="/surveys/access-survey",
                                  expected_response_text="ASHE spreadsheet for",
@@ -614,10 +590,6 @@ class FrontstageTasks(TaskSet, Mixins):
         request_url_download = soup.find(id="download_survey_button").get('href')
         request_url_upload = soup.find(id="surveys_upload_form").get('action')
 
-        ######################################
-        # Step 7: Download spreadsheet
-        ######################################
-
         self.response = self.get(url=request_url_download,
                                  grouping="/surveys/download-survey",
                                  expected_response_text="US006: Load SEFT Collection Instruments",
@@ -625,10 +597,6 @@ class FrontstageTasks(TaskSet, Mixins):
                                  expected_content_disposition="attachment; filename=065_201803_0001.xlsx",
                                  expected_content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                                  expected_content_length="39")
-
-        ######################################
-        # Step 8: Upload spreadsheet
-        ######################################
 
         file_stream = open("/mnt/locust/065_201803_0001.xlsx", "r", encoding="utf-8")
         files = {"file": ("065_201803_0001.xlsx", file_stream, "application/json")}
