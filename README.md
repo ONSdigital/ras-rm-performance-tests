@@ -81,25 +81,17 @@ Once completed, run:
 
 **NOTE**: The below commands **should** only ever be ran in dev (under your namespace) or in performance.
 
-Firstly, whitelist your IP using the ras commands for the dev or performance. Then get the database for either dev or 
-performance credentials:
-
-**DEV**
-
-`psql postgresql://postgres:postgres@localhost:5432/ras -U postgres -f [FILEPATH-FROM-YOUR-LOCAL-MACHINE]Services/ras-rm-cucumber/_infra/helm/acceptance-tests/files/[SCRIPT-NAME]`
-
-**PERFORMANCE**
+Firstly, whitelist your IP using the ras commands for the dev or performance. Then get the database credentials for
+performance only (**Note**: Dev doesn't need this):
 
 `export PERFORMANCE_PASSWORD_[TARGET-SERVICE]=$(kubectl get secret [DB-CREDENTIALS] -o json --namespace=performance | jq -r '.data."[PASSWORD-KEY]"' | base64 -d)`
 
-The above command for performance will need to be replicated for all the schemas affected by the Locust tests. When 
-using dev, this will only be a single command.
-
+The above command for performance will need to be replicated for all the schemas affected by the Locust tests. 
 Once the password(s) have been exported to your local machine, run one of the following:
 
 **DEV**
 
-`psql postgresql://postgres:$DEV_PASSWORD_DATABASE@localhost:5432/ras -U postgres -f [FILEPATH-FROM-YOUR-LOCAL-MACHINE]Services/ras-rm-cucumber/_infra/helm/acceptance-tests/files/[SCRIPT-NAME]`
+`psql postgresql://postgres:postgres@localhost:5432/ras -U postgres -f [FILEPATH-FROM-YOUR-LOCAL-MACHINE]Services/ras-rm-cucumber/_infra/helm/acceptance-tests/files/[SCRIPT-NAME]`
 
 **PERFORMANCE**
 
