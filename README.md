@@ -34,6 +34,7 @@ fly --target development execute --config [FILEPATH-FROM-YOUR-LOCAL-MACHINE]/ras
     --var ENV=[TARGET-ENV] \
     --var CLUSTER=[TARGET-CLUSTER] \
     --var LOCUST_FILE=[LOCUST-CONFIG-FILE].py \
+    --var LOCUST_LOCUSTFILE_DIRECTORY=[LOCUST-LOCUST-FILE-DIRECTORY] \
     --var TEST_RESPONDENTS=8 \
     --var LOCUST_USERS=8 \
     --var LOCUST_SPAWN_RATE=1 \
@@ -59,6 +60,7 @@ helm upgrade --install locust [FILEPATH-FROM-YOUR-LOCAL-MACHINE]ras-rm-performan
     --set-string locust.master.environment.LOCUST_SPAWN_RATE=1 \
     --set-string locust.master.environment.LOCUST_RUN_TIME="60m" \
     --set-string locust.loadtest.locust_locustfile=[LOCUST-CONFIG-FILE].py
+    --set-string locust.loadtest.locust_locustfile_directory=[LOCUST-LOCUST-FILE-DIRECTORY]
 ```
 
 These below commands are to be used when Performance is not the target project
