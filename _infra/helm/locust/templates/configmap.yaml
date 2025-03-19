@@ -3,4 +3,4 @@ kind: ConfigMap
 metadata:
   name: locust-worker
 data:
-{{ (.Files.Glob "locustfiles/*").AsConfig | indent 2 }}
+{{ (.Files.Glob (printf "%s/*" .Values.locust.loadtest.locust_locustfile_directory)).AsConfig | indent 2 }}
