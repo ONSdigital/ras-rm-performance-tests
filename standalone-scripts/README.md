@@ -1,6 +1,6 @@
 # Stand alone Locust test files
 
-The scripts in this folder are intended to be used when carrying bespoke, point-in-time performance testing. They are intended for controlled, manual deplouyment and are not intended to be used in automated/scheduled testing.
+The scripts in this folder are intended to be used when carrying bespoke, point-in-time performance testing. They are intended for controlled, manual deployment and are not intended to be used in automated/scheduled testing.
 
 ## How to run the standalone scripts
 
