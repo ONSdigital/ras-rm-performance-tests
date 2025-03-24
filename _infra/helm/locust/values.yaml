@@ -4,7 +4,6 @@ locust:
     headless: true
     locust_locustfile: locustfile.py
     locust_locustfile_configmap: locust-worker
-    locust_locustfile_directory: locustfiles
     locust_host: http://frontstage.performance.svc.cluster.local:9000
     pip_packages:
       - google-cloud-storage
@@ -27,7 +26,6 @@ locust:
       requests_file: requests.json
       user_wait_time_min_seconds: 5
       user_wait_time_max_seconds: 15
-      locust_directory: standalone-scripts
 
   master:
     replicas: 1
