@@ -15,7 +15,7 @@ from bs4 import BeautifulSoup
 
 from werkzeug import exceptions
 from google.cloud import storage
-from locust import HttpUser, TaskSet, task, events, between
+from locust import HttpUser, TaskSet, task, events
 from locust.runners import MasterRunner, LocalRunner
 
 r = random.Random()
@@ -498,6 +498,13 @@ class Mixins:
 
     def verify_response(self, expected_response_status, expected_response_text, response, url):
 
+        # As the thread_id is only created once a message has been posted, it can only be retrieved after the response
+        # Is received. Therefore, the thread_id is grabbed here and inserted into the expected text
+        if "thread_id" in response.text:
+            soup = BeautifulSoup(self.response.text, "html.parser")
+            thread_id_link = soup.find("a", string="View Message")
+            expected_response_text = expected_response_text + thread_id_link
+
         if response.status_code != expected_response_status:
             error = f"Expected a {expected_response_status} but got a {response.status_code} for url {url}"
             response.failure(error)
@@ -525,6 +532,7 @@ class FrontstageTasks(TaskSet, Mixins):
 
     @task
     def perform_requests(self):
+        business_id = None
         for request in request_list:
             grouping = request.get("grouping")
             expected_response_text = request.get("expected_response_text")
@@ -543,10 +551,17 @@ class FrontstageTasks(TaskSet, Mixins):
                 request_url = request["url"]
 
             if request["method"] == "GET":
-                self.response =self.get(request_url, grouping, expected_response_text, expected_response_status)
+                self.response = self.get(request_url, grouping, expected_response_text, expected_response_status)
+                # This was the only way to obtain the business_id needed for the post message
+                if "business_id" in self.response.text:
+                    soup = BeautifulSoup(self.response.text, "html.parser")
+                    business_id_input = soup.find("input", attrs={"name": "business_id"})
+                    business_id = business_id_input.attrs.get("value")
             elif request["method"] == "POST":
                 request_url = self.response.url if request_url == "self" else request_url
-                response_data = request['data']
+                response_data = request["data"]
+                if business_id:
+                    response_data["business_id"] = business_id
                 self.response = self.post(url=request_url,
                                           data=response_data,
                                           grouping=grouping,
