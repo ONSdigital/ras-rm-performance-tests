@@ -18,7 +18,11 @@
                 "subject": "Help with my survey",
                 "body": "test secure message"
             },
-            "expected_response_text": "Your message has been sent, a request can take up to 5 working days "
+            "expected_response_text": "Click on the survey name to complete your questionnaire.",
+            "harvest": {
+                "ids": ["business_id"],
+                "type": "id"
+            }
         },
         {
             "method": "GET",
@@ -37,8 +41,8 @@
         },
         {
             "method": "GET",
-            "harvest_url": {
-                "id": "surveyLongName",
+            "harvest": {
+                "ids": "surveyLongName",
                 "link_text": "Quarterly Business Survey"
             },
             "expected_response_text": "session?token=",
