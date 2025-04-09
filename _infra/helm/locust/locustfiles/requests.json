@@ -20,8 +20,8 @@
             },
             "expected_response_text": "Click on the survey name to complete your questionnaire.",
             "harvest": {
-                "ids": ["business_id"],
-                "type": "id"
+                "names": ["business_id"],
+                "type": "name"
             }
         },
         {

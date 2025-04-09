@@ -543,13 +543,11 @@ class FrontstageTasks(TaskSet, Mixins):
                         logger.error(f"Unable to harvest url {request['harvest']}")
                         self.interrupt()
 
-                if harvest_details["type"] == "id":
-                    # The name 'value' will be used temporarily until the naming convention of name is changed to id in
-                    # Frontstage. Then this should be updated to match
-                    for value in harvest_details["ids"]:
-                        input_name = soup.find("input", attrs={"name": value})
+                if harvest_details["type"] == "name":
+                    for name in harvest_details["names"]:
+                        input_name = soup.find("input", attrs={"name": name})
                         input_value = input_name.attrs.get("value")
-                        harvest_dict[value] = input_value
+                        harvest_dict[name] = input_value
             else:
                 request_url = request["url"]
 
