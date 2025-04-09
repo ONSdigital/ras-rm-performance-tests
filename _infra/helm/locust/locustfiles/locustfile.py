@@ -529,7 +529,6 @@ class FrontstageTasks(TaskSet, Mixins):
             grouping = request.get("grouping")
             expected_response_text = request.get("expected_response_text")
             expected_response_status = request.get("response_status", 200)
-            request_url = request["url"] if "url" in request else None
             harvest_dict = {}
 
             if self.response and "harvest" in request:
@@ -545,18 +544,22 @@ class FrontstageTasks(TaskSet, Mixins):
                         self.interrupt()
 
                 if harvest_details["type"] == "id":
-                    for id_name in harvest_details["ids"]:
-                        input_name = soup.find("input", attrs={"name": id_name})
+                    # The name 'value' will be used temporarily until the naming convention of name is changed to id in
+                    # Frontstage. Then this should be updated to match
+                    for value in harvest_details["ids"]:
+                        input_name = soup.find("input", attrs={"name": value})
                         input_value = input_name.attrs.get("value")
-                        harvest_dict[id_name] = input_value
+                        harvest_dict[value] = input_value
+            else:
+                request_url = request["url"]
 
             if request["method"] == "GET":
                 self.response = self.get(request_url, grouping, expected_response_text, expected_response_status)
             elif request["method"] == "POST":
                 request_url = self.response.url if request_url == "self" else request_url
                 response_data = request["data"]
-                response_data.update(harvest_dict)
-
+                if harvest_dict:
+                    response_data.update(harvest_dict)
                 self.response = self.post(url=request_url,
                                           data=response_data,
                                           grouping=grouping,

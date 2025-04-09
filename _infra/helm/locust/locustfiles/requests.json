@@ -42,8 +42,9 @@
         {
             "method": "GET",
             "harvest": {
-                "ids": "surveyLongName",
-                "link_text": "Quarterly Business Survey"
+                "id": "surveyLongName",
+                "link_text": "Quarterly Business Survey",
+                "type": "url"
             },
             "expected_response_text": "session?token=",
             "response_status": 302,
