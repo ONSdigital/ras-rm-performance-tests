@@ -15,7 +15,7 @@ from bs4 import BeautifulSoup
 
 from werkzeug import exceptions
 from google.cloud import storage
-from locust import HttpUser, TaskSet, task, events, between
+from locust import HttpUser, TaskSet, task, events
 from locust.runners import MasterRunner, LocalRunner
 
 r = random.Random()
@@ -529,24 +529,35 @@ class FrontstageTasks(TaskSet, Mixins):
             grouping = request.get("grouping")
             expected_response_text = request.get("expected_response_text")
             expected_response_status = request.get("response_status", 200)
+            harvest_dict = {}
 
-            if self.response and "harvest_url" in request:
+            if self.response and "harvest" in request:
                 soup = BeautifulSoup(self.response.text, "html.parser")
+                harvest_details = request["harvest"]
 
-                for link in soup.find_all(id=request["harvest_url"]["id"]):
-                    if request["harvest_url"]["link_text"] in link.get_text():
-                        request_url = link.get("href")
-                        break
-                    logger.error(f"Unable to harvest url {request['harvest_url']}")
-                    self.interrupt()
+                if harvest_details["type"] == "url":
+                    for link in soup.find_all(id=request["harvest"]["id"]):
+                        if request["harvest"]["link_text"] in link.get_text():
+                            request_url = link.get("href")
+                            break
+                        logger.error(f"Unable to harvest url {request['harvest']}")
+                        self.interrupt()
+
+                if harvest_details["type"] == "name":
+                    for name in harvest_details["names"]:
+                        input_name = soup.find("input", attrs={"name": name})
+                        input_value = input_name.attrs.get("value")
+                        harvest_dict[name] = input_value
             else:
                 request_url = request["url"]
 
             if request["method"] == "GET":
-                self.response =self.get(request_url, grouping, expected_response_text, expected_response_status)
+                self.response = self.get(request_url, grouping, expected_response_text, expected_response_status)
             elif request["method"] == "POST":
                 request_url = self.response.url if request_url == "self" else request_url
-                response_data = request['data']
+                response_data = request["data"]
+                if harvest_dict:
+                    response_data.update(harvest_dict)
                 self.response = self.post(url=request_url,
                                           data=response_data,
                                           grouping=grouping,
