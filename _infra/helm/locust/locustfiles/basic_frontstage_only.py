@@ -157,21 +157,6 @@ class FrontstageLocust(HttpUser):
     wait_time = between(USER_WAIT_TIME_MIN_SECONDS, USER_WAIT_TIME_MAX_SECONDS)
 
 
-
-class GoogleCloudStorage:
-
-    def __init__(self):
-        self.project_id = os.getenv('GOOGLE_CLOUD_PROJECT')
-        self.bucket_name = os.getenv('GCS_BUCKET_NAME')
-        self.client = storage.Client(project=self.project_id)
-        self.bucket = self.client.bucket(self.bucket_name)
-
-    def upload(self, file_name, file):
-        path = datetime.utcnow().strftime("%y-%m-%d-%H-%M") + "/" + file_name
-        blob = self.bucket.blob(path)
-        blob.upload_from_string(data=file, content_type='application/csv')
-
-
 def _capture_csrf_token(html):
     match = CSRF_REGEX.search(html)
     if match:

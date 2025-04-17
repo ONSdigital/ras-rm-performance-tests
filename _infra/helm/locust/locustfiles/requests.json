@@ -4,67 +4,6 @@
             "method": "GET",
             "url": "/surveys/todo",
             "expected_response_text": "Click on the survey name to complete your questionnaire"
-        },
-        {
-            "method": "GET",
-            "harvest_url": {
-                "id": "create-message-link-1",
-                "link_text": "Get help with this survey"
-            },
-            "expected_response_text": "Choose an option",
-            "grouping": "/help"
-        },
-        {
-            "method": "POST",
-            "url": "self",
-            "data": {
-                "option": "help-completing-this-survey"
-            },
-            "expected_response_text": "Help completing the Quarterly Business Survey",
-            "grouping": "/help"
-        },
-        {
-            "method": "POST",
-            "url": "self",
-            "data": {
-                "option": "answer-survey-question"
-            },
-            "expected_response_text": "Send a message",
-            "grouping": "/help"
-        },
-        {
-            "method": "POST",
-            "url": "self",
-            "data": {
-                "body": "test secure message"
-            },
-            "expected_response_text": "Click on the survey name to complete your questionnaire",
-            "grouping": "/send-message"
-        },
-        {
-            "method": "GET",
-            "url": "/secure-message/threads",
-            "expected_response_text": "test secure message"
-        },
-        {
-            "method": "GET",
-            "url": "/surveys/history",
-            "expected_response_text": "<title>Completed surveys | ONS Business Surveys</title>"
-        },
-        {
-            "method": "GET",
-            "url": "/surveys/todo",
-            "expected_response_text": "Click on the survey name to complete your questionnaire"
-        },
-        {
-            "method": "GET",
-            "harvest_url": {
-                "id": "surveyLongName",
-                "link_text": "Quarterly Business Survey"
-            },
-            "expected_response_text": "session?token=",
-            "response_status": 302,
-            "grouping": "/surveys/access-survey"
         }
     ]
 }
