@@ -27,8 +27,8 @@ with open(requests_file, encoding='utf-8') as requests_file:
 # Ignore these during collection exercise event processing as they are the key
 # for the collection exercise and don't represent event data
 CSRF_REGEX = re.compile(r'<input id="csrf_token" name="csrf_token" type="hidden" value="(.+?)"\/?>')
-USER_WAIT_TIME_MIN_SECONDS = 5
-USER_WAIT_TIME_MAX_SECONDS = 15
+USER_WAIT_TIME_MIN_SECONDS = 1
+USER_WAIT_TIME_MAX_SECONDS = 1
 
 
 # This will only be run on Master
@@ -52,41 +52,39 @@ class Mixins:
     response = None
 
     def get(
-        self,
-        url: str,
-        grouping: str=None,
-        expected_response_text: str=None,
-        expected_response_status: int=200,
+            self,
+            url: str,
+            grouping: str = None,
+            expected_response_text: str = None,
+            expected_response_status: int = 200,
     ):
-        with self.client.get(url=url,
-                             name=grouping,
-                             allow_redirects=False,
-                             catch_response=True,
-                             headers={"Referer":"https://surveys-preprod.onsdigital.uk"}
-                             ) as response:
+        with self.client.get(url=url, name=grouping, allow_redirects=False, catch_response=True,
+                             headers={"Referer": os.getenv('host')}) as response:
             self.verify_response(expected_response_status, expected_response_text, response, url)
+            time.sleep(r.randint(USER_WAIT_TIME_MIN_SECONDS, USER_WAIT_TIME_MAX_SECONDS))
             return response
 
     def post(
-        self,
-        url: str,
-        data: dict = {},
-        grouping: str=None,
-        expected_response_text: str=None,
-        expected_response_status: int=200,
-        allow_redirects: bool=True,
+            self,
+            url: str,
+            data: dict = {},
+            grouping: str = None,
+            expected_response_text: str = None,
+            expected_response_status: int = 200,
+            allow_redirects: bool = True,
     ):
         data["csrf_token"] = self.csrf_token
 
         with self.client.post(
-            url=url,
-            name=grouping,
-            data=data,
-            allow_redirects=allow_redirects,
-            catch_response=True,
-            headers={"Referer":"https://surveys-preprod.onsdigital.uk"}
+                url=url,
+                name=grouping,
+                data=data,
+                allow_redirects=allow_redirects,
+                catch_response=True,
+                headers={"Referer": os.getenv('host')}
         ) as response:
             self.verify_response(expected_response_status, expected_response_text, response, url)
+            time.sleep(r.randint(USER_WAIT_TIME_MIN_SECONDS, USER_WAIT_TIME_MAX_SECONDS))
             return response
 
     def verify_response(self, expected_response_status, expected_response_text, response, url):
@@ -122,24 +120,35 @@ class FrontstageTasks(TaskSet, Mixins):
             grouping = request.get("grouping")
             expected_response_text = request.get("expected_response_text")
             expected_response_status = request.get("response_status", 200)
+            harvest_dict = {}
 
-            if self.response and "harvest_url" in request:
+            if self.response and "harvest" in request:
                 soup = BeautifulSoup(self.response.text, "html.parser")
+                harvest_details = request["harvest"]
 
-                for link in soup.find_all(id=request["harvest_url"]["id"]):
-                    if request["harvest_url"]["link_text"] in link.get_text():
-                        request_url = link.get("href")
-                        break
-                    logger.error(f"Unable to harvest url {request['harvest_url']}")
-                    self.interrupt()
+                if harvest_details["type"] == "url":
+                    for link in soup.find_all(id=request["harvest"]["id"]):
+                        if request["harvest"]["link_text"] in link.get_text():
+                            request_url = link.get("href")
+                            break
+                        logger.error(f"Unable to harvest url {request['harvest']}")
+                        self.interrupt()
+
+                if harvest_details["type"] == "name":
+                    for name in harvest_details["names"]:
+                        input_name = soup.find("input", attrs={"name": name})
+                        input_value = input_name.attrs.get("value")
+                        harvest_dict[name] = input_value
             else:
                 request_url = request["url"]
 
             if request["method"] == "GET":
-                self.response =self.get(request_url, grouping, expected_response_text, expected_response_status)
+                self.response = self.get(request_url, grouping, expected_response_text, expected_response_status)
             elif request["method"] == "POST":
                 request_url = self.response.url if request_url == "self" else request_url
-                response_data = request['data']
+                response_data = request["data"]
+                if harvest_dict:
+                    response_data.update(harvest_dict)
                 self.response = self.post(url=request_url,
                                           data=response_data,
                                           grouping=grouping,
@@ -150,11 +159,10 @@ class FrontstageTasks(TaskSet, Mixins):
                     valid_methods={"GET", "POST"},
                     description=f"Invalid request method {request['method']} for request to: {request_url}"
                 )
-            time.sleep(r.randint(USER_WAIT_TIME_MIN_SECONDS, USER_WAIT_TIME_MAX_SECONDS))
+
 
 class FrontstageLocust(HttpUser):
     tasks = {FrontstageTasks}
-    wait_time = between(USER_WAIT_TIME_MIN_SECONDS, USER_WAIT_TIME_MAX_SECONDS)
 
 
 def _capture_csrf_token(html):
@@ -164,4 +172,5 @@ def _capture_csrf_token(html):
 
 
 def _respondent():
-    return {"username": os.getenv("frontstage_respondent_username"), "password": os.getenv("frontstage_respondent_password")}
+    return {"username": os.getenv("frontstage_respondent_username"),
+            "password": os.getenv("frontstage_respondent_password")}
