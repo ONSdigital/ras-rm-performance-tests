@@ -19,17 +19,17 @@ jobs:
     name: Build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@ee0669bd1cc54295c223e0bb666b733df41de1c5	# v2.7.0
         with:
           fetch-depth: '0'
           token: ${{ secrets.BOT_TOKEN }}
       - name: Authenticate with Google Cloud
         id: auth
-        uses: google-github-actions/auth@v2
+        uses: google-github-actions/auth@71f986410dfbc7added4569d411d040a91dc6935 # v2.1.8
         with:
           credentials_json: ${{ secrets.GCR_KEY }}
       - name: Setup Google Cloud SDK
-        uses: google-github-actions/setup-gcloud@v2
+        uses: google-github-actions/setup-gcloud@6189d56e4096ee891640bb02ac264be376592d6a # v2.1.2
       - run: |
           gcloud auth configure-docker
       - name: add helm repo
