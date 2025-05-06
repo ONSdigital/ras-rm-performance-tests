@@ -4,6 +4,51 @@
             "method": "GET",
             "url": "/surveys/todo",
             "expected_response_text": "Click on the survey name to complete your questionnaire"
+        },
+        {
+            "method": "GET",
+            "url": "/contact-us/send-message",
+            "expected_response_text": "Send a message"
+        },
+        {
+            "method": "POST",
+            "url": "/contact-us/send-message",
+            "data": {
+                "survey_id": "02b9c366-7397-42f7-942a-76dc5876d86d",
+                "subject": "Help with my survey",
+                "body": "test secure message"
+            },
+            "expected_response_text": "Click on the survey name to complete your questionnaire.",
+            "harvest": {
+                "names": ["business_id"],
+                "type": "name"
+            }
+        },
+        {
+            "method": "GET",
+            "url": "/secure-message/threads",
+            "expected_response_text": "test secure message"
+        },
+        {
+            "method": "GET",
+            "url": "/surveys/history",
+            "expected_response_text": "<title>Completed surveys | ONS Business Surveys</title>"
+        },
+        {
+            "method": "GET",
+            "url": "/surveys/todo",
+            "expected_response_text": "Click on the survey name to complete your questionnaire"
+        },
+        {
+            "method": "GET",
+            "harvest": {
+                "id": "surveyLongName",
+                "link_text": "Quarterly Business Survey",
+                "type": "url"
+            },
+            "expected_response_text": "session?token=",
+            "response_status": 302,
+            "grouping": "/surveys/access-survey"
         }
     ]
 }
