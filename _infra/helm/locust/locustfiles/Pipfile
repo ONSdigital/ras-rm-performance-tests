@@ -4,6 +4,7 @@ verify_ssl = true
 name = "pypi"
 [packages]
 google-cloud-storage = "*"
+google-cloud-pubsub = "*"
 locust = "*"
 bs4 = "*"
 [dev-packages]
