@@ -24,19 +24,20 @@ def callback(message: pubsub_v1.subscriber.message.Message) -> None:
     print(f"Received {message}.")
     data = json.loads(message.data.decode("utf-8"))
     source_url = data["notify"]["personalisation"]["ACCOUNT_VERIFICATION_URL"]
-    print(source_url)
-    url = source_url.replace("http://localhost:8080", environment_base_url)
-    print(url)
-    start = time.time()
-    response = requests.get(url)
-    latency = time.time() - start
-    print(f"Status code: {response.status_code}")
-    if "You've activated your account" not in response.text:
-        print("Activation text not found in response page.")
-    else:
-        print("Account successfully activated.")
-    print(f"Request latency: {latency:.3f} seconds")
-    message.ack()
+    if source_url:
+        print(source_url)
+        url = source_url.replace("http://localhost:8080", environment_base_url)
+        print(url)
+        start = time.time()
+        response = requests.get(url)
+        latency = time.time() - start
+        print(f"Status code: {response.status_code}")
+        if "You've activated your account" not in response.text:
+            print("Activation text not found in response page.")
+        else:
+            print("Account successfully activated.")
+        print(f"Request latency: {latency:.3f} seconds")
+        message.ack()
 
 
 streaming_pull_future = subscriber.subscribe(subscription_path, callback=callback)
