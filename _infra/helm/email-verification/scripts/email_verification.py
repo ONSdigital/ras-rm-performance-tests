@@ -9,10 +9,10 @@ from google.cloud import pubsub_v1
 
 project_id = os.getenv('GOOGLE_CLOUD_PROJECT')
 subscription_id = os.getenv('PUBSUB_SUBSCRIPTION_ID')
-environment_base_url = os.getenv('ENVIRONMENT_BASE_URL', 'http://localhost:8082')
+environment_base_url = os.getenv('FRONTSTAGE_URL', 'http://localhost:8082')
 
 # Number of seconds the subscriber should listen for messages
-timeout = 180.0
+timeout = int(os.getenv('TIMEOUT_SECONDS', 180.0))
 
 subscriber = pubsub_v1.SubscriberClient()
 # The `subscription_path` method creates a fully qualified identifier
