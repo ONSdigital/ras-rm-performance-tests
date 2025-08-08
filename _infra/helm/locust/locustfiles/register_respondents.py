@@ -35,9 +35,26 @@ subscription_id = os.getenv('PUBSUB_SUBSCRIPTION_ID')  # e.g., 'ras-rm-notify-su
 messages = []
 
 
+def get_iacs():
+    client = storage.Client(project=os.getenv('GOOGLE_CLOUD_PROJECT'))
+    bucket = client.bucket(os.getenv('GCS_DATA_BUCKET_NAME'))
+    blob = bucket.blob(os.getenv('IAC_FILE_NAME'))
+    csv_text = blob.download_as_text()
+
+    # Parse CSV into a list of tuples (int, str)
+    rows = []
+    reader = csv.reader(csv_text.splitlines())
+    for row in reader:
+        rows.append((int(row[0]), row[1]))
+
+    return rows
+
+iacs = get_iacs()
+
 # This will only be run on Master
 @events.test_start.add_listener
 def on_test_start(environment, **kwargs):
+    logger.info("iacs: %s", iacs)
     logger.info("on_test_start Locust runner: %s", environment.runner)
     if isinstance(environment.runner, (MasterRunner, LocalRunner)):
         logger.error(f"Running on MasterRunner/LocalRunner, no actions to take")
@@ -108,7 +125,6 @@ class FrontstageTasks(TaskSet, Mixins):
 
     def on_start(self):
         self.sign_in()
-        iacs = get_iacs()
         logger.info(f"IACS: {len(iacs)}")
 
     def sign_in(self):
@@ -182,16 +198,3 @@ def _respondent():
             "password": os.getenv("frontstage_respondent_password")}
 
 
-def get_iacs():
-    client = storage.Client(project=os.getenv('GOOGLE_CLOUD_PROJECT'))
-    bucket = client.bucket(os.getenv('GCS_DATA_BUCKET_NAME'))
-    blob = bucket.blob(os.getenv('IAC_FILE_NAME'))
-    csv_text = blob.download_as_text()
-
-    # Parse CSV into a list of tuples (int, str)
-    rows = []
-    reader = csv.reader(csv_text.splitlines())
-    for row in reader:
-        rows.append((int(row[0]), row[1]))
-
-    return rows
