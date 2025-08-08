@@ -5,6 +5,7 @@ import os
 import random
 import re
 import time
+import queue
 
 from bs4 import BeautifulSoup
 from google.cloud import storage
@@ -29,19 +30,14 @@ CSRF_REGEX = re.compile(r'<input id="csrf_token" name="csrf_token" type="hidden"
 USER_WAIT_TIME_MIN_SECONDS = 1
 USER_WAIT_TIME_MAX_SECONDS = 1
 
-# Set these environment variables or replace with your values
-project_id = os.getenv('GOOGLE_CLOUD_PROJECT')
-subscription_id = os.getenv('PUBSUB_SUBSCRIPTION_ID')  # e.g., 'ras-rm-notify-sub'
-messages = []
 
+# Load a csv file from the bucket containing IACs
 
 def get_iacs():
     client = storage.Client(project=os.getenv('GOOGLE_CLOUD_PROJECT'))
     bucket = client.bucket(os.getenv('GCS_DATA_BUCKET_NAME'))
     blob = bucket.blob(os.getenv('IAC_FILE_NAME'))
     csv_text = blob.download_as_text()
-
-    # Parse CSV into a list of tuples (int, str)
     rows = []
     reader = csv.reader(csv_text.splitlines())
     for row in reader:
@@ -50,11 +46,16 @@ def get_iacs():
     return rows
 
 iacs = get_iacs()
+logger.info(f"IACS: {len(iacs)}")
+
+iacs_queue = queue.Queue()
+for iac in iacs:
+    iacs_queue.put(iac)
 
 # This will only be run on Master
 @events.test_start.add_listener
 def on_test_start(environment, **kwargs):
-    logger.info("iacs: %s", iacs)
+    logger.info("Number of IACs: %s", len(iacs))
     logger.info("on_test_start Locust runner: %s", environment.runner)
     if isinstance(environment.runner, (MasterRunner, LocalRunner)):
         logger.error(f"Running on MasterRunner/LocalRunner, no actions to take")
@@ -124,8 +125,13 @@ class Mixins:
 class FrontstageTasks(TaskSet, Mixins):
 
     def on_start(self):
+        try:
+            self.iac_tuple = iacs_queue.get_nowait()
+        except queue.Empty:
+            self.iac_tuple = None  # Or handle as needed
+        logger.info(f"Using IAC tuple: {self.iac_tuple}")
+        # Now self.iac_tuple is unique per user
         self.sign_in()
-        logger.info(f"IACS: {len(iacs)}")
 
     def sign_in(self):
         self.response = self.get(url="/sign-in", expected_response_text="Sign in")
