@@ -1,0 +1,11 @@
+image:
+  repository: python
+  tag: "3.12-slim"
+  pullPolicy: IfNotPresent
+scriptName: email_verification.py
+
+env:
+  GOOGLE_CLOUD_PROJECT: ras-rm-dev
+  PUBSUB_SUBSCRIPTION_ID: gcf-ras-rm-notify-dev-europe-west2-ras-rm-notify-dev
+  FRONTSTAGE_URL: "http://$(FRONTSTAGE_SERVICE_HOST):$(FRONTSTAGE_SERVICE_PORT)"
+  TIMEOUT_SECONDS: 360

@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: email-verification
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: email-verification
+  template:
+    metadata:
+      labels:
+        app: email-verification
+    spec:
+      containers:
+        - name: email-verification
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          workingDir: /app
+          command:
+            [
+              "sh",
+              "-c",
+              "pip install pipenv && pipenv install --deploy && pipenv run python {{ .Values.scriptName }}"
+            ]
+          volumeMounts:
+            - name: script-volume
+              mountPath: /app
+            - name: google-cloud-key
+              mountPath: /var/secrets/google
+          env:
+            - name: GOOGLE_CLOUD_PROJECT
+              value: {{ .Values.env.GOOGLE_CLOUD_PROJECT | quote }}
+            - name: PUBSUB_SUBSCRIPTION_ID
+              value: {{ .Values.env.PUBSUB_SUBSCRIPTION_ID | quote }}
+            - name: FRONTSTAGE_URL
+              value: {{ .Values.env.FRONTSTAGE_URL | quote }}
+            - name: TIMEOUT_SECONDS
+              value: {{ .Values.env.TIMEOUT_SECONDS | quote }}
+            - name: GOOGLE_APPLICATION_CREDENTIALS
+              value: /var/secrets/google/credentials.json
+      volumes:
+        - name: script-volume
+          configMap:
+            name: email-verification-config
+        - name: google-cloud-key
+          secret:
+            secretName: google-application-credentials
