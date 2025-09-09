@@ -49,6 +49,45 @@
             "expected_response_text": "session?token=",
             "response_status": 302,
             "grouping": "/surveys/access-survey"
+        },
+        {
+            "method": "GET",
+            "url": "/surveys/todo",
+            "expected_response_text": "Click on the survey name to complete your questionnaire"
+        },
+        {
+            "method": "GET",
+            "harvest": {
+                "id": "surveyLongName",
+                "link_text": "Annual Survey of Hours and Earnings",
+                "type": "url"
+            },
+            "expected_response_text": "Upload your spreadsheet",
+            "grouping": "/surveys/seft",
+            "stash": true
+        },
+        {
+            "method": "GET",
+            "harvest": {
+                "id": "download_survey_button",
+                "link_text": "Download spreadsheet",
+                "type": "url"
+            },
+            "expected_attachment": "065_201803_0001.xlsx",
+            "grouping": "/surveys/download-survey"
+        },
+        {
+            "method": "POST",
+            "data": {
+                "file": "065_201803_0001.xlsx"
+            },
+            "expected_response_text": "File uploaded successfully",
+            "harvest": {
+                "id": "surveys_upload_form",
+                "type": "form"
+            },
+            "grouping": "/surveys/upload-survey",
+            "apply_stash": true
         }
     ]
 }
