@@ -48,7 +48,7 @@
             },
             "expected_response_text": "session?token=",
             "response_status": 302,
-            "grouping": "/surveys/access-survey"
+            "grouping": "/surveys/access-survey/eq"
         },
         {
             "method": "GET",
@@ -63,7 +63,7 @@
                 "type": "url"
             },
             "expected_response_text": "Upload your spreadsheet",
-            "grouping": "/surveys/seft",
+            "grouping": "/surveys/access-survey/seft",
             "stash": true
         },
         {
