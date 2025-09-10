@@ -582,7 +582,7 @@ class FrontstageTasks(TaskSet, Mixins):
                 if harvest_dict:
                     response_data.update(harvest_dict)
                 if "file" in response_data:
-                    file_stream = open(response_data["file"], "r", encoding="utf-8")
+                    file_stream = open(f"/mnt/locust/{response_data['file']}", "r", encoding="utf-8")
                     file = {"file": ("065_201803_0001.xlsx", file_stream, "application/json")}
 
                 self.response = self.post(
