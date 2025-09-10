@@ -49,7 +49,7 @@ SURVEY_DETAILS = [
         "ce_config": "/mnt/locust/qbs_collection-exercise-config.json",
         "ce_events": "/mnt/locust/qbs_collection-exercise-event-config.json",
         "type": "EQ",
-        "survey_ref": "139",
+        "survey_ref": "139"
     },
     {
         "survey_name": "ASHE",
@@ -57,6 +57,7 @@ SURVEY_DETAILS = [
         "ce_events": "/mnt/locust/ashe_collection-exercise-event-config.json",
         "type": "SEFT",
         "survey_ref": "141",
+        "ci_file_location": "/mnt/locust/065_201803_0001.xlsx"
     },
 ]
 
@@ -68,7 +69,8 @@ def load_data():
         survey_id = get_survey_id(survey["survey_name"])
         load_collection_exercises(survey["ce_config"])
         load_collection_exercise_events(survey["ce_events"])
-        load_and_link_collection_instrument(survey_id, survey["type"], survey["survey_ref"])
+        load_and_link_collection_instrument(survey_id, survey["type"], survey["survey_ref"],
+                                            survey.get("ci_file_location"))
         load_and_link_sample(survey["survey_ref"])
         execute_collection_exercise(survey["survey_ref"])
     register_users()
@@ -194,7 +196,7 @@ def post_event(collection_exercise_id, event_tag, date):
 
 
 # Collection instrument loading
-def load_and_link_collection_instrument(survey_id, survey_type, survey_ref):
+def load_and_link_collection_instrument(survey_id, survey_type, survey_ref, ci_file_location):
     logger.info("Uploading collection instrument", extra={"survey_id": survey_id, "form_type": FORM_TYPE})
     collection_exercise = get_collection_exercise(survey_ref, PERIOD)
     if not collection_exercise:
@@ -208,9 +210,9 @@ def load_and_link_collection_instrument(survey_id, survey_type, survey_ref):
         post_url = (
             f"{os.getenv('collection_instrument')}/collection-instrument-api/1.0.2/upload/{collection_exercise_id}"
         )
-        file_stream = open("/mnt/locust/065_201803_0001.xlsx", "r", encoding="utf-8")
-        file = {"file": ("065_201803_0001.xlsx", file_stream, "application/json")}
-        requests.post(url=post_url, files=file, params=params, auth=AUTH)
+        ci_file_stream = open(ci_file_location, "r", encoding="utf-8")
+        ci_file= {"file": ("065_201803_0001.xlsx", ci_file_stream, "application/json")}
+        requests.post(url=post_url, files=ci_file, params=params, auth=AUTH)
 
     else:
         post_classifiers["eq_id"] = EQ_ID
@@ -583,7 +585,7 @@ class FrontstageTasks(TaskSet, Mixins):
                     response_data.update(harvest_dict)
                 if "file" in response_data:
                     file_stream = open(f"/mnt/locust/{response_data['file']}", "r", encoding="utf-8")
-                    file = {"file": ("065_201803_0001.xlsx", file_stream, "application/json")}
+                    file = {"file": (response_data["file"], file_stream, "application/json")}
 
                 self.response = self.post(
                     url=request_url,

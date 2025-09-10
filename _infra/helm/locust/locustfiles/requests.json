@@ -79,7 +79,7 @@
         {
             "method": "POST",
             "data": {
-                "file": "065_201803_0001.xlsx"
+                "file": "065_201803_0001-upload.xlsx"
             },
             "expected_response_text": "File uploaded successfully",
             "harvest": {
