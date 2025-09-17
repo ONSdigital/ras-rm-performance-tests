@@ -571,7 +571,7 @@ class FrontstageTasks(TaskSet, Mixins):
                         input_value = input_name.attrs.get("value")
                         harvest_dict[name] = input_value
                 if harvest_details["type"] == "form":
-                    request_url = soup.find("form", id="surveys_upload_form").get("action")
+                    request_url = soup.find("form", id=harvest_details["id"]).get("action")
             else:
                 request_url = request["url"]
 
