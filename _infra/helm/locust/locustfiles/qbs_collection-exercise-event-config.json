@@ -1,0 +1,7 @@
+{
+    "inputFiles": ["/mnt/locust/qbs_ce_event_details.csv"],
+    "columnMappings": {
+        "survey_code": "surveyRef",
+        "survey_period": "exerciseRef"
+    }
+}
