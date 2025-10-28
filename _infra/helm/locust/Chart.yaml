@@ -22,5 +22,5 @@ appVersion: 1.0.26
 
 dependencies:
   - name: locust
-    version: 0.31.5
+    version: 0.32.6
     repository: "@deliveryhero"
