@@ -1,6 +1,6 @@
 dependencies:
 - name: locust
-  repository: https://charts.deliveryhero.io/
-  version: 0.31.6
-digest: sha256:e970fee22b7be189cac72b445470511efe6defb9353fb53e8fc017ad3c2803ba
-generated: "2025-10-28T12:31:51.824395Z"
+  repository: https://raw.githubusercontent.com/deliveryhero/helm-charts/refs/heads/master/
+  version: 0.32.5
+digest: sha256:d9c3133033915db1b31750df8cd14521a6b614fbc8a85b5a40a29f8a18b611c6
+generated: "2025-10-29T11:37:48.249044Z"
