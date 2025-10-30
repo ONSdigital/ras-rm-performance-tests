@@ -29,6 +29,7 @@ locust:
 
   master:
     replicas: 1
+    logLevel: DEBUG
     environment:
       LOCUST_USERS: 10
       LOCUST_SPAWN_RATE: 1
@@ -38,6 +39,7 @@ locust:
 
   worker:
     replicas: 1
+    logLevel: DEBUG
     strategy:
       type: RollingUpdate
 
