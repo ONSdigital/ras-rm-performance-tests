@@ -34,7 +34,7 @@ jobs:
           gcloud auth configure-docker
       - name: add helm repo
         run: |
-          helm repo add deliveryhero https://charts.deliveryhero.io/
+          helm repo add deliveryhero https://raw.githubusercontent.com/deliveryhero/helm-charts/refs/heads/master/
       - name: template helm
         run: |
           helm template $CHART_DIRECTORY

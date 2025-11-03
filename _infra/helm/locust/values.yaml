@@ -29,18 +29,30 @@ locust:
 
   master:
     replicas: 1
+    logLevel: DEBUG
+    config:
+      locust-mode-master: true
     environment:
       LOCUST_USERS: 10
       LOCUST_SPAWN_RATE: 1
       LOCUST_RUN_TIME: 35m
       LOCUST_ONLY_SUMMARY: true
       LOCUST_CSV: rasrm
+      LOCUST_MASTER_BIND_HOST: 127.0.0.1
+      LOCUST_MASTER_BIND_PORT: 5557
 
   worker:
+    config:
+      locust-mode-worker: true
+    ports: 5559
     replicas: 1
+    logLevel: DEBUG
     strategy:
       type: RollingUpdate
+    environment:
+      LOCUST_MASTER_NODE_HOST: 127.0.0.1
+      LOCUST_MASTER_NODE_PORT: 5557
 
   image:
     repository: locustio/locust
-    tag: 2.15.1
+    tag: 2.32.2
