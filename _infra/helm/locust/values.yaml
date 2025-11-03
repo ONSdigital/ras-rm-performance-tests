@@ -45,7 +45,8 @@ locust:
     strategy:
       type: RollingUpdate
     environment:
-      LOCUST_MASTER_NODE_HOST: 192.168.1.10
+      LOCUST_MASTER_NODE_HOST: 0.0.0.0
+      LOCUST_MASTER_NODE_PORT: 5557
 
   image:
     repository: locustio/locust
