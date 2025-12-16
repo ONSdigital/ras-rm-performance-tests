@@ -29,7 +29,7 @@ with open(requests_file, encoding='utf-8') as requests_file:
 CSRF_REGEX = re.compile(r'<input id="csrf_token" name="csrf_token" type="hidden" value="(.+?)"\/?>')
 USER_WAIT_TIME_MIN_SECONDS = 1
 USER_WAIT_TIME_MAX_SECONDS = 1
-
+CERT_PATH = "/opt/ONS/Cisco_Umbrella_Root_CA.pem"
 
 # This will only be run on Master
 @events.test_start.add_listener
@@ -58,7 +58,7 @@ class Mixins:
             expected_response_text: str = None,
             expected_response_status: int = 200,
     ):
-        with self.client.get(url=url, name=grouping, allow_redirects=False, catch_response=True,
+        with self.client.get(url=url, name=grouping, allow_redirects=False, verify=CERT_PATH, catch_response=True,
                              headers={"Referer": os.getenv('host')}) as response:
             self.verify_response(expected_response_status, expected_response_text, response, url)
             time.sleep(r.randint(USER_WAIT_TIME_MIN_SECONDS, USER_WAIT_TIME_MAX_SECONDS))
@@ -80,6 +80,7 @@ class Mixins:
                 name=grouping,
                 data=data,
                 allow_redirects=allow_redirects,
+                verify=CERT_PATH,
                 catch_response=True,
                 headers={"Referer": os.getenv('host')}
         ) as response:
