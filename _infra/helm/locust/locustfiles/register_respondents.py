@@ -52,10 +52,32 @@ iacs_queue = queue.Queue()
 for iac in iacs:
     iacs_queue.put(iac)
 
+# Load a csv file from the bucket containing Respondents
+
+def get_respondents():
+    client = storage.Client(project=os.getenv('GOOGLE_CLOUD_PROJECT'))
+    bucket = client.bucket(os.getenv('GCS_DATA_BUCKET_NAME'))
+    blob = bucket.blob(os.getenv('RESPONDENT_FILE_NAME'))
+    csv_text = blob.download_as_text()
+    rows = []
+    reader = csv.reader(csv_text.splitlines())
+    for row in reader:
+        rows.append((row[0], row[1]))
+
+    return rows
+
+respondents = get_respondents()
+logger.info(f"RESPONDENTS: {len(respondents)}")
+
+respondents_queue = queue.Queue()
+for respondent in respondents:
+    respondents_queue.put(respondent)
+
 # This will only be run on Master
 @events.test_start.add_listener
 def on_test_start(environment, **kwargs):
     logger.info("Number of IACs: %s", len(iacs))
+    logger.info("Number of Respondents: %s", len(respondents))
     logger.info("on_test_start Locust runner: %s", environment.runner)
     if isinstance(environment.runner, (MasterRunner, LocalRunner)):
         logger.error(f"Running on MasterRunner/LocalRunner, no actions to take")
@@ -128,9 +150,16 @@ class FrontstageTasks(TaskSet, Mixins):
         try:
             self.iac_tuple = iacs_queue.get_nowait()
         except queue.Empty:
+            logger.info(f"iacs_queue is empty")
             self.iac_tuple = None  # Or handle as needed
-        logger.info(f"Using IAC tuple: {self.iac_tuple}")
+        logger.info(f"Using IAC tuple: {self.iac_tuple}") # Not really doing anything with this, just a redundant POC
         # Now self.iac_tuple is unique per user
+        try:
+            self.respondent_tuple = respondents_queue.get_nowait()
+        except queue.Empty:
+            logger.info(f"respondents_queue is empty")
+            self.respondent_tuple = None  # Or handle as needed
+        logger.info(f"Using Respondent tuple: {self.respondent_tuple}")
         self.sign_in()
 
     def sign_in(self):
