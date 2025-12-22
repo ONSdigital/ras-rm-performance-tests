@@ -29,7 +29,7 @@ with open(requests_file, encoding='utf-8') as requests_file:
 CSRF_REGEX = re.compile(r'<input id="csrf_token" name="csrf_token" type="hidden" value="(.+?)"\/?>')
 USER_WAIT_TIME_MIN_SECONDS = 1
 USER_WAIT_TIME_MAX_SECONDS = 1
-
+CERT_PATH = "/opt/ONS/Cisco_Umbrella_Root_CA.pem"
 
 # Load a csv file from the bucket containing IACs
 
@@ -102,7 +102,7 @@ class Mixins:
             expected_response_text: str = None,
             expected_response_status: int = 200,
     ):
-        with self.client.get(url=url, name=grouping, allow_redirects=False, catch_response=True,
+        with self.client.get(url=url, name=grouping, allow_redirects=False, verify=CERT_PATH, catch_response=True,
                              headers={"Referer": os.getenv('host')}) as response:
             self.verify_response(expected_response_status, expected_response_text, response, url)
             time.sleep(r.randint(USER_WAIT_TIME_MIN_SECONDS, USER_WAIT_TIME_MAX_SECONDS))
@@ -124,6 +124,7 @@ class Mixins:
                 name=grouping,
                 data=data,
                 allow_redirects=allow_redirects,
+                verify=CERT_PATH,
                 catch_response=True,
                 headers={"Referer": os.getenv('host')}
         ) as response:
@@ -147,28 +148,34 @@ class Mixins:
 class FrontstageTasks(TaskSet, Mixins):
 
     def on_start(self):
-        try:
-            self.iac_tuple = iacs_queue.get_nowait()
-        except queue.Empty:
-            logger.info(f"iacs_queue is empty")
-            self.iac_tuple = None  # Or handle as needed
-        logger.info(f"Using IAC tuple: {self.iac_tuple}") # Not really doing anything with this, just a redundant POC
+        # try:
+        #     self.iac_tuple = iacs_queue.get_nowait()
+        # except queue.Empty:
+        #     logger.info(f"iacs_queue is empty")
+        #     self.iac_tuple = None  # Or handle as needed
+        # logger.info(f"Using IAC tuple: {self.iac_tuple}") # Not really doing anything with this, just a redundant POC
         # Now self.iac_tuple is unique per user
         try:
             self.respondent_tuple = respondents_queue.get_nowait()
         except queue.Empty:
             logger.info(f"respondents_queue is empty")
             self.respondent_tuple = None  # Or handle as needed
-        logger.info(f"Using Respondent tuple: {self.respondent_tuple}")
-        self.sign_in()
+        # logger.info(f"Using Respondent tuple: {self.respondent_tuple}")
+        if self.respondent_tuple:
+            self.sign_in(*self.respondent_tuple)
+        else:
+            self.sign_in()
 
-    def sign_in(self):
+    def sign_in(self, username=None, password=None):
         self.response = self.get(url="/sign-in", expected_response_text="Sign in")
         self.csrf_token = _capture_csrf_token(self.response.content.decode('utf8'))
-        self.response = self.post(url="/sign-in",
-                                  data=_respondent(),
-                                  allow_redirects=False,
-                                  expected_response_status=302)
+        logger.info(f"/sign-in respondent: {username}, password: {password}")
+        self.response = self.post(
+            url="/sign-in",
+            data=_respondent(username, password),
+            allow_redirects=False,
+            expected_response_status=302
+        )
         self.auth_cookie = self.response.cookies['authorization']
 
     @task
@@ -228,8 +235,9 @@ def _capture_csrf_token(html):
         return match.group(1)
 
 
-def _respondent():
-    return {"username": os.getenv("frontstage_respondent_username"),
-            "password": os.getenv("frontstage_respondent_password")}
-
+def _respondent(username=None, password=None):
+    return {
+        "username": username if username is not None else os.getenv("frontstage_respondent_username"),
+        "password": password if password is not None else os.getenv("frontstage_respondent_password")
+    }
 
