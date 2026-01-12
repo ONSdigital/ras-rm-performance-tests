@@ -1,17 +1,17 @@
-import datetime
+import csv
 import json
 import logging
 import os
+import random
 import re
 import time
-import random
-from datetime import datetime
-from bs4 import BeautifulSoup
+import queue
 
-from werkzeug import exceptions
+from bs4 import BeautifulSoup
 from google.cloud import storage
-from locust import HttpUser, TaskSet, task, events, between
+from locust import HttpUser, TaskSet, task, events
 from locust.runners import MasterRunner, LocalRunner
+from werkzeug import exceptions
 
 r = random.Random()
 
@@ -30,10 +30,31 @@ CSRF_REGEX = re.compile(r'<input id="csrf_token" name="csrf_token" type="hidden"
 USER_WAIT_TIME_MIN_SECONDS = 1
 USER_WAIT_TIME_MAX_SECONDS = 1
 
+# Load a csv file from the bucket containing registered respondents
+
+def get_respondents():
+    client = storage.Client(project=os.getenv('GOOGLE_CLOUD_PROJECT'))
+    bucket = client.bucket(os.getenv('GCS_DATA_BUCKET_NAME'))
+    blob = bucket.blob(os.getenv('RESPONDENT_FILE_NAME'))
+    csv_text = blob.download_as_text()
+    rows = []
+    reader = csv.reader(csv_text.splitlines())
+    for row in reader:
+        rows.append((row[0], row[1]))
+
+    return rows
+
+respondents = get_respondents()
+logger.info(f"RESPONDENTS: {len(respondents)}")
+
+respondents_queue = queue.Queue()
+for respondent in respondents:
+    respondents_queue.put(respondent)
 
 # This will only be run on Master
 @events.test_start.add_listener
 def on_test_start(environment, **kwargs):
+    logger.info("Number of Respondents: %s", len(respondents))
     logger.info("on_test_start Locust runner: %s", environment.runner)
     if isinstance(environment.runner, (MasterRunner, LocalRunner)):
         logger.error(f"Running on MasterRunner/LocalRunner, no actions to take")
@@ -103,15 +124,27 @@ class Mixins:
 class FrontstageTasks(TaskSet, Mixins):
 
     def on_start(self):
-        self.sign_in()
+        try:
+            self.respondent_tuple = respondents_queue.get_nowait()
+        except queue.Empty:
+            logger.info(f"respondents_queue is empty")
+            self.respondent_tuple = None  # Or handle as needed
+        # logger.info(f"Using Respondent tuple: {self.respondent_tuple}")
+        if self.respondent_tuple:
+            self.sign_in(*self.respondent_tuple)
+        else:
+            self.sign_in()
 
-    def sign_in(self):
+    def sign_in(self, username=None, password=None):
         self.response = self.get(url="/sign-in", expected_response_text="Sign in")
         self.csrf_token = _capture_csrf_token(self.response.content.decode('utf8'))
-        self.response = self.post(url="/sign-in",
-                                  data=_respondent(),
-                                  allow_redirects=False,
-                                  expected_response_status=302)
+        logger.info(f"/sign-in respondent: {username}, password: {password}")
+        self.response = self.post(
+            url="/sign-in",
+            data=_respondent(username, password),
+            allow_redirects=False,
+            expected_response_status=302
+        )
         self.auth_cookie = self.response.cookies['authorization']
 
     @task
@@ -171,6 +204,9 @@ def _capture_csrf_token(html):
         return match.group(1)
 
 
-def _respondent():
-    return {"username": os.getenv("frontstage_respondent_username"),
-            "password": os.getenv("frontstage_respondent_password")}
+def _respondent(username=None, password=None):
+    return {
+        "username": username if username is not None else os.getenv("frontstage_respondent_username"),
+        "password": password if password is not None else os.getenv("frontstage_respondent_password")
+    }
+

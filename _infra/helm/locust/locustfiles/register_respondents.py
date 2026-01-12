@@ -29,7 +29,6 @@ with open(requests_file, encoding='utf-8') as requests_file:
 CSRF_REGEX = re.compile(r'<input id="csrf_token" name="csrf_token" type="hidden" value="(.+?)"\/?>')
 USER_WAIT_TIME_MIN_SECONDS = 1
 USER_WAIT_TIME_MAX_SECONDS = 1
-CERT_PATH = "/opt/ONS/Cisco_Umbrella_Root_CA.pem"
 
 # Load a csv file from the bucket containing IACs
 
@@ -102,7 +101,7 @@ class Mixins:
             expected_response_text: str = None,
             expected_response_status: int = 200,
     ):
-        with self.client.get(url=url, name=grouping, allow_redirects=False, verify=CERT_PATH, catch_response=True,
+        with self.client.get(url=url, name=grouping, allow_redirects=False, catch_response=True,
                              headers={"Referer": os.getenv('host')}) as response:
             self.verify_response(expected_response_status, expected_response_text, response, url)
             time.sleep(r.randint(USER_WAIT_TIME_MIN_SECONDS, USER_WAIT_TIME_MAX_SECONDS))
@@ -124,7 +123,6 @@ class Mixins:
                 name=grouping,
                 data=data,
                 allow_redirects=allow_redirects,
-                verify=CERT_PATH,
                 catch_response=True,
                 headers={"Referer": os.getenv('host')}
         ) as response:
@@ -148,6 +146,8 @@ class Mixins:
 class FrontstageTasks(TaskSet, Mixins):
 
     def on_start(self):
+        # THIS IS INTENDED TO DO A REGISTER RESPONDENT JOURNEY USING iac_queue AND NOT A
+        # SIGN_IN JOURNEY using respondents_queue. THIS HAS BEEN LEFT HERE AS AN EXAMPLE OF HOW TO ITERATE THE QUEUE
         # try:
         #     self.iac_tuple = iacs_queue.get_nowait()
         # except queue.Empty:
@@ -166,6 +166,7 @@ class FrontstageTasks(TaskSet, Mixins):
         else:
             self.sign_in()
 
+    # THIS WILL BE register_respondent NOT sign_in
     def sign_in(self, username=None, password=None):
         self.response = self.get(url="/sign-in", expected_response_text="Sign in")
         self.csrf_token = _capture_csrf_token(self.response.content.decode('utf8'))
@@ -179,6 +180,7 @@ class FrontstageTasks(TaskSet, Mixins):
         self.auth_cookie = self.response.cookies['authorization']
 
     @task
+    # THE requests json will be specific to the register_respondent journey
     def perform_requests(self):
         for request in request_list:
             grouping = request.get("grouping")
