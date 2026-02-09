@@ -1,4 +1,10 @@
 locust:
+  serviceAccountName: ras-rm-k8s-services
+  imagePullSecrets:
+    - name: gar-secret
+  nodeSelector:
+    iam.gke.io/gke-metadata-server-enabled: "true"
+
   loadtest:
     name: performance-test
     headless: true
