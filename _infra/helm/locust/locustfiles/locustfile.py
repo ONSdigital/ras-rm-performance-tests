@@ -621,8 +621,11 @@ class GoogleCloudStorage:
     def __init__(self):
         self.project_id = os.getenv("GOOGLE_CLOUD_PROJECT")
         self.bucket_name = os.getenv("GCS_BUCKET_NAME")
+        logger.info("Creating Google Cloud Storage")
         self.client = storage.Client(project=self.project_id)
+        logger.info(f"client: {self.client}")
         self.bucket = self.client.bucket(self.bucket_name)
+        logger.info(f"bucket: {self.bucket}")
 
     def upload(self, file_name, file):
         path = datetime.utcnow().strftime("%y-%m-%d-%H-%M") + "/" + file_name
