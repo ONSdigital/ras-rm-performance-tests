@@ -37,6 +37,8 @@ locust:
       LOCUST_CSV: rasrm
     serviceAccountAnnotations:
       iam.gke.io/gcp-service-account: locust-master@ras-rm-performance-20220908.iam.gserviceaccount.com
+    nodeSelector:
+      iam.gke.io/gke-metadata-server-enabled: "true"
 
   worker:
     replicas: 1
@@ -44,6 +46,8 @@ locust:
       type: RollingUpdate
     serviceAccountAnnotations:
       iam.gke.io/gcp-service-account: locust-worker@ras-rm-performance-20220908.iam.gserviceaccount.com
+    nodeSelector:
+      iam.gke.io/gke-metadata-server-enabled: "true"
 
   image:
     repository: locustio/locust
