@@ -460,17 +460,22 @@ def on_test_start(environment, **kwargs):
 def on_test_stop(environment, **kwargs):
     logger.info("on_test_stop Locust runner: %s", environment.runner)
     if isinstance(environment.runner, (MasterRunner, LocalRunner)):
-        logger.info("about to upload files")
+        logger.info("initialising bucket connection")
         gcs = GoogleCloudStorage()
+        logger.info("initialised bucket")
         failures = "rasrm_failures.csv"
         stats = "rasrm_stats.csv"
         history = "rasrm_stats_history.csv"
 
+        logger.info("about to upload files")
         with open(failures) as f:
+            logger.info("uploading failure file")
             gcs.upload(file_name=failures, file=f.read())
         with open(stats) as s:
+            logger.info("uploading stats file")
             gcs.upload(file_name=stats, file=s.read())
         with open(history) as h:
+            logger.info("uploading history file")
             gcs.upload(file_name=history, file=h.read())
         logger.info("Successfully uploaded files")
 
