@@ -460,6 +460,7 @@ def on_test_start(environment, **kwargs):
 def on_test_stop(environment, **kwargs):
     logger.info("on_test_stop Locust runner: %s", environment.runner)
     if isinstance(environment.runner, (MasterRunner, LocalRunner)):
+        logger.info("about to upload files")
         gcs = GoogleCloudStorage()
         failures = "rasrm_failures.csv"
         stats = "rasrm_stats.csv"
@@ -471,6 +472,7 @@ def on_test_stop(environment, **kwargs):
             gcs.upload(file_name=stats, file=s.read())
         with open(history) as h:
             gcs.upload(file_name=history, file=h.read())
+        logger.info("Successfully uploaded files")
 
 
 class Mixins:
@@ -621,6 +623,7 @@ class GoogleCloudStorage:
         path = datetime.utcnow().strftime("%y-%m-%d-%H-%M") + "/" + file_name
         blob = self.bucket.blob(path)
         blob.upload_from_string(data=file, content_type="application/csv")
+        logger.info(f"Uploaded {file_name} to Google Cloud Storage")
 
 
 def _capture_csrf_token(html):
