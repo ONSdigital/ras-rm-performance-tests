@@ -7,8 +7,8 @@
         },
         {
             "method": "GET",
-            "url": "/contact-us/send-message",
-            "expected_response_text": "Send a message"
+            "url": "/contact-us/select-organisation",
+            "expected_response_text": "Select Organisation"
         },
         {
             "method": "GET",
@@ -19,6 +19,16 @@
             "method": "GET",
             "url": "/surveys/history",
             "expected_response_text": "<title>Completed surveys | ONS Business Surveys</title>"
+        },
+        {
+            "method": "GET",
+            "url": "/my-account",
+            "expected_response_text": "My Account"
+        },
+        {
+            "method": "GET",
+            "url": "/surveys/add-survey",
+            "expected_response_text": "Enter your enrolment code"
         }
     ]
 }
