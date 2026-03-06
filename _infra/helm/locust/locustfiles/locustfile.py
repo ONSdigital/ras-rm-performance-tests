@@ -627,7 +627,8 @@ class GoogleCloudStorage:
         self.bucket_name = os.getenv("GCS_BUCKET_NAME")
         logger.info("Creating Google Cloud Storage")
         # self.client = storage.Client(project=self.project_id)
-        logger.info(f"client: {client}")
+        # logger.info(f"client: {client}")
+        logger.info("setting up bucket")
         self.bucket = client.bucket(self.bucket_name)
         logger.info(f"bucket: {self.bucket}")
 

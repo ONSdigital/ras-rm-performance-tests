@@ -26,6 +26,7 @@ locust:
       requests_file: requests.json
       user_wait_time_min_seconds: 5
       user_wait_time_max_seconds: 15
+      GOOGLE_CLOUD_LOGGING_VERBOSE: "debug"
 
   master:
     replicas: 1
@@ -35,6 +36,7 @@ locust:
       LOCUST_RUN_TIME: 35m
       LOCUST_ONLY_SUMMARY: true
       LOCUST_CSV: rasrm
+      GOOGLE_CLOUD_LOGGING_VERBOSE: "debug"
     serviceAccountAnnotations:
       iam.gke.io/gcp-service-account: locust-master@ras-rm-performance-20220908.iam.gserviceaccount.com
     nodeSelector:
