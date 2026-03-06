@@ -8,7 +8,6 @@ locust:
     pip_packages:
       - google-cloud-storage
       - bs4
-      - gevent
     environment:
       case: http://case.performance.svc.cluster.local:8080
       collection_exercise: http://collection-exercise.performance.svc.cluster.local:8080
