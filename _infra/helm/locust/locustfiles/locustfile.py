@@ -64,10 +64,10 @@ SURVEY_DETAILS = [
     },
 ]
 
-client = storage.Client()
-logger.info(f"client: {client}")
-
-upload_complete = False
+# client = storage.Client()
+# logger.info(f"client: {client}")
+#
+# upload_complete = False
 
 
 # Load data for tests
@@ -470,11 +470,30 @@ def on_test_start(environment, **kwargs):
 def on_test_stop(environment, **kwargs):
     logger.info("on_test_stop Locust runner: %s", environment.runner)
     if isinstance(environment.runner, (MasterRunner, LocalRunner)):
-        environment.runner.upload_greenlet.kill()
-        environment.runner.upload_greenlet = spawn(_upload_files)
+        logger.info("initialising bucket connection")
+        gcs = GoogleCloudStorage()
+        logger.info("initialised bucket")
+        failures = "rasrm_failures.csv"
+        stats = "rasrm_stats.csv"
+        history = "rasrm_stats_history.csv"
 
-        while not upload_complete:
-            sleep(0.1)
+        logger.info("about to upload files")
+        with open(failures) as f:
+            logger.info("uploading failure file")
+            gcs.upload(file_name=failures, file=f.read())
+        with open(stats) as s:
+            logger.info("uploading stats file")
+            gcs.upload(file_name=stats, file=s.read())
+        with open(history) as h:
+            logger.info("uploading history file")
+            gcs.upload(file_name=history, file=h.read())
+        logger.info("Successfully uploaded files")
+
+        # environment.runner.upload_greenlet.kill()
+        # environment.runner.upload_greenlet = spawn(_upload_files)
+        #
+        # while not upload_complete:
+        #     sleep(0.1)
 
 
 class Mixins:
@@ -619,10 +638,10 @@ class GoogleCloudStorage:
         self.project_id = os.getenv("GOOGLE_CLOUD_PROJECT")
         self.bucket_name = os.getenv("GCS_BUCKET_NAME")
         logger.info("Creating Google Cloud Storage")
-        # self.client = storage.Client(project=self.project_id)
+        self.client = storage.Client(project=self.project_id)
         # logger.info(f"client: {client}")
         logger.info("setting up bucket")
-        self.bucket = client.bucket(self.bucket_name)
+        self.bucket = self.client.bucket(self.bucket_name)
         logger.info(f"bucket: {self.bucket}")
 
     def upload(self, file_name, file):
@@ -646,25 +665,25 @@ def _generate_random_respondent():
     return {"username": respondent_email, "password": os.getenv("test_respondent_password")}
 
 
-def _upload_files():
-    global upload_complete
-    logger.info("initialising bucket connection")
-    gcs = GoogleCloudStorage()
-    logger.info("initialised bucket")
-    failures = "rasrm_failures.csv"
-    stats = "rasrm_stats.csv"
-    history = "rasrm_stats_history.csv"
-
-    logger.info("about to upload files")
-    with open(failures) as f:
-        logger.info("uploading failure file")
-        gcs.upload(file_name=failures, file=f.read())
-    with open(stats) as s:
-        logger.info("uploading stats file")
-        gcs.upload(file_name=stats, file=s.read())
-    with open(history) as h:
-        logger.info("uploading history file")
-        gcs.upload(file_name=history, file=h.read())
-    logger.info("Successfully uploaded files")
-
-    upload_complete = True
+# def _upload_files():
+#     global upload_complete
+#     logger.info("initialising bucket connection")
+#     gcs = GoogleCloudStorage()
+#     logger.info("initialised bucket")
+#     failures = "rasrm_failures.csv"
+#     stats = "rasrm_stats.csv"
+#     history = "rasrm_stats_history.csv"
+#
+#     logger.info("about to upload files")
+#     with open(failures) as f:
+#         logger.info("uploading failure file")
+#         gcs.upload(file_name=failures, file=f.read())
+#     with open(stats) as s:
+#         logger.info("uploading stats file")
+#         gcs.upload(file_name=stats, file=s.read())
+#     with open(history) as h:
+#         logger.info("uploading history file")
+#         gcs.upload(file_name=history, file=h.read())
+#     logger.info("Successfully uploaded files")
+#
+#     upload_complete = True
