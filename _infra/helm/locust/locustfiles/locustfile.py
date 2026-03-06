@@ -633,8 +633,11 @@ class GoogleCloudStorage:
         logger.info(f"bucket: {self.bucket}")
 
     def upload(self, file_name, file):
+        logger.info(f"Uploading {file_name} to Google Cloud Storage")
         path = datetime.utcnow().strftime("%y-%m-%d-%H-%M") + "/" + file_name
+        logger.info("created file path")
         blob = self.bucket.blob(path)
+        logger.info("created blob and about to upload")
         blob.upload_from_string(data=file, content_type="application/csv")
         logger.info(f"Uploaded {file_name} to Google Cloud Storage")
 
