@@ -64,11 +64,6 @@ SURVEY_DETAILS = [
     },
 ]
 
-# client = storage.Client()
-# logger.info(f"client: {client}")
-#
-# upload_complete = False
-
 
 # Load data for tests
 def load_data():
@@ -470,30 +465,17 @@ def on_test_start(environment, **kwargs):
 def on_test_stop(environment, **kwargs):
     logger.info("on_test_stop Locust runner: %s", environment.runner)
     if isinstance(environment.runner, (MasterRunner, LocalRunner)):
-        logger.info("initialising bucket connection")
         gcs = GoogleCloudStorage()
-        logger.info("initialised bucket")
         failures = "rasrm_failures.csv"
         stats = "rasrm_stats.csv"
         history = "rasrm_stats_history.csv"
 
-        logger.info("about to upload files")
         with open(failures) as f:
-            logger.info("uploading failure file")
             gcs.upload(file_name=failures, file=f.read())
         with open(stats) as s:
-            logger.info("uploading stats file")
             gcs.upload(file_name=stats, file=s.read())
         with open(history) as h:
-            logger.info("uploading history file")
             gcs.upload(file_name=history, file=h.read())
-        logger.info("Successfully uploaded files")
-
-        # environment.runner.upload_greenlet.kill()
-        # environment.runner.upload_greenlet = spawn(_upload_files)
-        #
-        # while not upload_complete:
-        #     sleep(0.1)
 
 
 class Mixins:
@@ -637,21 +619,13 @@ class GoogleCloudStorage:
     def __init__(self):
         self.project_id = os.getenv("GOOGLE_CLOUD_PROJECT")
         self.bucket_name = os.getenv("GCS_BUCKET_NAME")
-        logger.info("Creating Google Cloud Storage")
         self.client = storage.Client(project=self.project_id)
-        # logger.info(f"client: {client}")
-        logger.info("setting up bucket")
         self.bucket = self.client.bucket(self.bucket_name)
-        logger.info(f"bucket: {self.bucket}")
 
     def upload(self, file_name, file):
-        logger.info(f"Uploading {file_name} to Google Cloud Storage")
         path = datetime.utcnow().strftime("%y-%m-%d-%H-%M") + "/" + file_name
-        logger.info("created file path")
         blob = self.bucket.blob(path)
-        logger.info("created blob and about to upload")
         blob.upload_from_string(data=file, content_type="application/csv")
-        logger.info(f"Uploaded {file_name} to Google Cloud Storage")
 
 
 def _capture_csrf_token(html):
@@ -663,27 +637,3 @@ def _capture_csrf_token(html):
 def _generate_random_respondent():
     respondent_email = f"499{random.randint(0, RESPONDENTS-1):08}@test.com"
     return {"username": respondent_email, "password": os.getenv("test_respondent_password")}
-
-
-# def _upload_files():
-#     global upload_complete
-#     logger.info("initialising bucket connection")
-#     gcs = GoogleCloudStorage()
-#     logger.info("initialised bucket")
-#     failures = "rasrm_failures.csv"
-#     stats = "rasrm_stats.csv"
-#     history = "rasrm_stats_history.csv"
-#
-#     logger.info("about to upload files")
-#     with open(failures) as f:
-#         logger.info("uploading failure file")
-#         gcs.upload(file_name=failures, file=f.read())
-#     with open(stats) as s:
-#         logger.info("uploading stats file")
-#         gcs.upload(file_name=stats, file=s.read())
-#     with open(history) as h:
-#         logger.info("uploading history file")
-#         gcs.upload(file_name=history, file=h.read())
-#     logger.info("Successfully uploaded files")
-#
-#     upload_complete = True
