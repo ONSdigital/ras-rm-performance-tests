@@ -61,6 +61,10 @@ SURVEY_DETAILS = [
     },
 ]
 
+client = storage.Client()
+logger.info(f"client: {client}")
+
+
 # Load data for tests
 def load_data():
     logger.info(f"Container host: {socket.gethostname()}")
@@ -622,9 +626,9 @@ class GoogleCloudStorage:
         self.project_id = os.getenv("GOOGLE_CLOUD_PROJECT")
         self.bucket_name = os.getenv("GCS_BUCKET_NAME")
         logger.info("Creating Google Cloud Storage")
-        self.client = storage.Client(project=self.project_id)
-        logger.info(f"client: {self.client}")
-        self.bucket = self.client.bucket(self.bucket_name)
+        # self.client = storage.Client(project=self.project_id)
+        logger.info(f"client: {client}")
+        self.bucket = client.bucket(self.bucket_name)
         logger.info(f"bucket: {self.bucket}")
 
     def upload(self, file_name, file):
