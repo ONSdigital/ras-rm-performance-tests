@@ -61,7 +61,6 @@ SURVEY_DETAILS = [
     },
 ]
 
-
 # Load data for tests
 def load_data():
     logger.info(f"Container host: {socket.gethostname()}")
@@ -472,7 +471,6 @@ def on_test_stop(environment, **kwargs):
             gcs.upload(file_name=stats, file=s.read())
         with open(history) as h:
             gcs.upload(file_name=history, file=h.read())
-        logger.info("Successfully uploaded files")
 
 
 class Mixins:
