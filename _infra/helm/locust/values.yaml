@@ -35,8 +35,6 @@ locust:
       LOCUST_RUN_TIME: 15m
       LOCUST_ONLY_SUMMARY: true
       LOCUST_CSV: rasrm
-    serviceAccountAnnotations:
-      iam.gke.io/gcp-service-account: ras-rm-k8s-services@ras-rm-performance-20220908.iam.gserviceaccount.com
     nodeSelector:
       iam.gke.io/gke-metadata-server-enabled: "true"
 
@@ -44,8 +42,6 @@ locust:
     replicas: 1
     strategy:
       type: RollingUpdate
-    serviceAccountAnnotations:
-      iam.gke.io/gcp-service-account: ras-rm-k8s-services@ras-rm-performance-20220908.iam.gserviceaccount.com
     nodeSelector:
       iam.gke.io/gke-metadata-server-enabled: "true"
 
