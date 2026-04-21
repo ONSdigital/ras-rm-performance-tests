@@ -32,14 +32,18 @@ locust:
     environment:
       LOCUST_USERS: 10
       LOCUST_SPAWN_RATE: 1
-      LOCUST_RUN_TIME: 35m
+      LOCUST_RUN_TIME: 15m
       LOCUST_ONLY_SUMMARY: true
       LOCUST_CSV: rasrm
+    nodeSelector:
+      iam.gke.io/gke-metadata-server-enabled: "true"
 
   worker:
     replicas: 1
     strategy:
       type: RollingUpdate
+    nodeSelector:
+      iam.gke.io/gke-metadata-server-enabled: "true"
 
   image:
     repository: locustio/locust

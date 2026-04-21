@@ -471,6 +471,7 @@ def on_test_stop(environment, **kwargs):
             gcs.upload(file_name=stats, file=s.read())
         with open(history) as h:
             gcs.upload(file_name=history, file=h.read())
+        time.sleep(60)
 
 
 class Mixins:
