@@ -130,7 +130,7 @@ def reformat_date(date):
 
 # Collection exercise loading
 def load_collection_exercises(auth):
-    config = json.load(open("/mnt/locust/collection-exercise-seft-config.json"))
+    config = json.load(open(".//collection-exercise-seft-config.json"))
     input_files = config['inputFiles']
     column_mappings = config['columnMappings']
     url = f"{os.getenv('collection_exercise')}/collectionexercises"
@@ -152,7 +152,7 @@ def post_collection_exercise(data, url, auth):
 
 # Collection exercise event loading
 def load_collection_exercise_events(auth):
-    config = json.load(open("/mnt/locust/collection-exercise-seft-event-config.json"))
+    config = json.load(open(".//collection-exercise-seft-event-config.json"))
     input_files = config['inputFiles']
     column_mappings = config['columnMappings']
     url = f"{os.getenv('collection_exercise')}/collectionexercises"
@@ -214,7 +214,7 @@ def load_and_link_collection_instrument(auth, survey_id):
 
     params = {"classifiers": json.dumps(post_classifiers), "survey_id": survey_id}
 
-    file_stream = open("/mnt/locust/065_201803_0001.xlsx", "r", encoding="utf-8")
+    file_stream = open(".//065_201803_0001.xlsx", "r", encoding="utf-8")
     files = {"file": ("065_201803_0001.xlsx", file_stream, "application/json")}
 
     requests.post(url=post_url, files=files, params=params, auth=auth)
@@ -558,7 +558,7 @@ class FrontstageTasks(TaskSet, Mixins):
                                      expected_content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                                      expected_content_length="39")
 
-            file_stream = open("/mnt/locust/065_201803_0001.xlsx", "r", encoding="utf-8")
+            file_stream = open(".//065_201803_0001.xlsx", "r", encoding="utf-8")
             files = {"file": ("065_201803_0001.xlsx", file_stream, "application/json")}
             self.response = self.post(url=request_url_upload,
                                       grouping="/surveys/upload-survey",
@@ -598,7 +598,7 @@ class FrontstageTasks(TaskSet, Mixins):
                                  expected_content_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                                  expected_content_length="39")
 
-        file_stream = open("/mnt/locust/065_201803_0001.xlsx", "r", encoding="utf-8")
+        file_stream = open(".//065_201803_0001.xlsx", "r", encoding="utf-8")
         files = {"file": ("065_201803_0001.xlsx", file_stream, "application/json")}
         self.response = self.post(url=request_url_upload,
                                   grouping="/surveys/upload-survey",

@@ -26,7 +26,7 @@ FORM_TYPE = "0001"
 EQ_ID = "2"
 PERIOD = "1806"
 RESPONDENTS = int(os.getenv("test_respondents"))
-REQUEST_FILE = '/mnt/locust/' + os.getenv('requests_file')
+REQUEST_FILE = './/' + os.getenv('requests_file')
 r = random.Random()
 
 logger.info("Retrieving JSON requests from: %s", REQUEST_FILE)
@@ -46,18 +46,18 @@ CE_URL = f"{os.getenv('collection_exercise')}/collectionexercises"
 SURVEY_DETAILS = [
     {
         "survey_name": "QBS",
-        "ce_config": "/mnt/locust/qbs_collection-exercise-config.json",
-        "ce_events": "/mnt/locust/qbs_collection-exercise-event-config.json",
+        "ce_config": ".//qbs_collection-exercise-config.json",
+        "ce_events": ".//qbs_collection-exercise-event-config.json",
         "type": "EQ",
         "survey_ref": "139"
     },
     {
         "survey_name": "ASHE",
-        "ce_config": "/mnt/locust/ashe_collection-exercise-config.json",
-        "ce_events": "/mnt/locust/ashe_collection-exercise-event-config.json",
+        "ce_config": ".//ashe_collection-exercise-config.json",
+        "ce_events": ".//ashe_collection-exercise-event-config.json",
         "type": "SEFT",
         "survey_ref": "141",
-        "ci_file_location": "/mnt/locust/065_201803_0001.xlsx"
+        "ci_file_location": ".//065_201803_0001.xlsx"
     },
 ]
 
@@ -585,7 +585,7 @@ class FrontstageTasks(TaskSet, Mixins):
                 if harvest_dict:
                     response_data.update(harvest_dict)
                 if "file" in response_data:
-                    file_stream = open(f"/mnt/locust/{response_data['file']}", "r", encoding="utf-8")
+                    file_stream = open(f".//{response_data['file']}", "r", encoding="utf-8")
                     file = {"file": (response_data["file"], file_stream, "application/json")}
 
                 self.response = self.post(
