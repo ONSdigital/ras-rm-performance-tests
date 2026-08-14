@@ -531,6 +531,9 @@ class RasRmTasks(TaskSet, Mixins):
 
     def on_start(self):
         self.stash = {}
+        self.response = self.get(url="/sign-in", expected_response_text="Sign in")
+        self.csrf_token = _capture_csrf_token(self.response.content.decode("utf8"))
+
         requests_file = '/mnt/locust/' + os.getenv('requests_file')
         with open(requests_file, encoding="utf-8") as file:
             self.request_list = json.load(file)
@@ -546,8 +549,6 @@ class RasRmTasks(TaskSet, Mixins):
             )
 
     def sign_in_frontstage(self):
-        self.response = self.get(url="/sign-in", expected_response_text="Sign in")
-        self.csrf_token = _capture_csrf_token(self.response.content.decode("utf8"))
         self.response = self.post(
             url="/sign-in", data=_generate_random_respondent(), allow_redirects=False, expected_response_status=302
         )
@@ -558,7 +559,6 @@ class RasRmTasks(TaskSet, Mixins):
             url="/sign-in", data={"username": ROPS_USER_NAME, "password": ROPS_PASSWORD},
             allow_redirects=False, expected_response_status=302
         )
-
 
     @task
     def perform_requests(self):
