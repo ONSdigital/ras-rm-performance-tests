@@ -25,13 +25,11 @@ logger = logging.getLogger()
 FORM_TYPE = "0001"
 EQ_ID = "2"
 PERIOD = "1806"
-RESPONDENTS = int(os.getenv("test_respondents"))
-REQUEST_FILE = '/mnt/locust/' + os.getenv('requests_file')
 r = random.Random()
+RESPONDENTS = int(os.getenv("test_respondents"))
+ROPS_USER_NAME = "uaa_user@ons.gov.uk"
+ROPS_PASSWORD = "password"
 
-logger.info("Retrieving JSON requests from: %s", REQUEST_FILE)
-with open(REQUEST_FILE, encoding="utf-8") as REQUEST_FILE:
-    REQUEST_LIST = json.load(REQUEST_FILE)["requests"]
 
 # Ignore these during collection exercise event processing as they are the key
 # for the collection exercise and don't represent event data
@@ -529,23 +527,42 @@ class Mixins:
             self.interrupt()
 
 
-class FrontstageTasks(TaskSet, Mixins):
+class RasRmTasks(TaskSet, Mixins):
 
     def on_start(self):
-        self.sign_in()
-        self.stash = {}  # stash holds the response and url of a previous request so it can be re-used
-
-    def sign_in(self):
+        self.stash = {}
         self.response = self.get(url="/sign-in", expected_response_text="Sign in")
         self.csrf_token = _capture_csrf_token(self.response.content.decode("utf8"))
+
+        requests_file = '/mnt/locust/' + os.getenv('requests_file')
+        with open(requests_file, encoding="utf-8") as file:
+            self.request_list = json.load(file)
+        app = self.request_list["app"]
+
+        if app == "frontstage":
+            self.sign_in_frontstage()
+        elif app == "rops":
+            self.sign_in_rops()
+        else:
+            raise ValueError(
+                f"Unknown environment: {self.environment_name}"
+            )
+
+    def sign_in_frontstage(self):
         self.response = self.post(
             url="/sign-in", data=_generate_random_respondent(), allow_redirects=False, expected_response_status=302
         )
         self.auth_cookie = self.response.cookies["authorization"]
 
+    def sign_in_rops(self):
+        self.response = self.post(
+            url="/sign-in", data={"username": ROPS_USER_NAME, "password": ROPS_PASSWORD},
+            allow_redirects=False, expected_response_status=302
+        )
+
     @task
     def perform_requests(self):
-        for request in REQUEST_LIST:
+        for request in self.request_list["requests"]:
             grouping = request.get("grouping")
             expected_response_text = request.get("expected_response_text")
             expected_response_status = request.get("response_status", 200)
@@ -606,8 +623,8 @@ class FrontstageTasks(TaskSet, Mixins):
                 self.stash = {"url": request_url, "response": self.response}
 
 
-class FrontstageLocust(HttpUser):
-    tasks = {FrontstageTasks}
+class RasRmLocust(HttpUser):
+    tasks = {RasRmTasks}
 
 
 class GoogleCloudStorage:

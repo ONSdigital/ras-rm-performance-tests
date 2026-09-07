@@ -1,4 +1,5 @@
 {
+    "app": "frontstage",
     "requests": [
         {
             "method": "GET",

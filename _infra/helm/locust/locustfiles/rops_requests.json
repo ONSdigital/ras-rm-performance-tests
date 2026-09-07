@@ -1,0 +1,27 @@
+{
+    "requests": [
+        {
+            "method": "GET",
+            "url": "/reporting-units/search?query=49900000001",
+            "expected_response_text": "Type a reference or company name",
+            "grouping": "RU search for 49900000001"
+        },
+        {
+            "method": "GET",
+            "url": "/reporting-units/49900000001",
+            "expected_response_text": "139 QBS",
+            "grouping": "49900000001 enrolments"
+        },
+        {
+            "method": "GET",
+            "harvest": {
+                "id": "survey-QBS",
+                "link_text": "139 QBS",
+                "type": "url"
+            },
+            "expected_response_text": "Collection exercises",
+            "grouping": "49900000001 QBS enrolment details"
+        }
+    ],
+    "app": "rops"
+}
